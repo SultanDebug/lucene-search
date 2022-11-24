@@ -11,9 +11,9 @@ import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.MMapDirectory;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+
 /**
  * @author Huangzq
  * @description
@@ -39,7 +39,7 @@ public class FunctionScoreQueryTest {
         indexWriter = new IndexWriter(directory, conf);
 
 
-        Document doc ;
+        Document doc;
         // 0
 
         int count = 0;
@@ -104,13 +104,13 @@ public class FunctionScoreQueryTest {
 
         ScoreDoc[] docs = searcher.search(builder.build(), 20).scoreDocs;
         for (int i = 0; i < docs.length; i++) {
-            System.out.println("docId: "+docs[i].doc+", score: "+docs[i].score+"");
+            System.out.println("docId: " + docs[i].doc + ", score: " + docs[i].score + "");
         }
 
         System.out.println("hah");
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         FunctionScoreQueryTest test = new FunctionScoreQueryTest();
         test.doSearch();
     }

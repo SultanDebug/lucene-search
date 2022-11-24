@@ -1,17 +1,22 @@
 package com.hzq.researchtest.test;
+
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.PrefixQuery;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.MMapDirectory;
 
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
+
 /**
  * @author Huangzq
  * @description
@@ -78,16 +83,16 @@ public class PrefixQueryTest {
 
         ScoreDoc[] scoreDocs = searcher.search(query, resultTopN).scoreDocs;
 
-        System.out.println("Total Result Number: "+scoreDocs.length+"");
+        System.out.println("Total Result Number: " + scoreDocs.length + "");
         for (int i = 0; i < scoreDocs.length; i++) {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
-            System.out.println("result"+i+": 文档"+scoreDoc.doc+"");
+            System.out.println("result" + i + ": 文档" + scoreDoc.doc + "");
         }
 
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
         PrefixQueryTest prefixQueryTest = new PrefixQueryTest();
         prefixQueryTest.doDemo();
     }

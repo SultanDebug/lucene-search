@@ -1,10 +1,11 @@
 package com.hzq.researchtest.service;
 
-import com.hzq.researchtest.test.analyzer.MyAnalyzer;
+import com.hzq.researchtest.test.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.researchtest.test.analyzer.MyPinyinAnalyzer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -12,11 +13,11 @@ import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.IndexSearcher;
 import org.apache.lucene.search.PhraseQuery;
-import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.store.Directory;
-import org.apache.lucene.store.MMapDirectory;
+import org.apache.lucene.store.FSDirectory;
 import org.springframework.beans.factory.InitializingBean;
+import org.springframework.stereotype.Service;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.File;
@@ -24,18 +25,18 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Huangzq
  * @description
  * @date 2022/11/19 13:52
  */
-//@Service
+@Service
 @Slf4j
-public class LuceneService implements InitializingBean {
-    /*@Autowired
-    private BirdExtendAnalyzer birdExtendAnalyzer;*/
+public class LuceneMultiFieldService implements InitializingBean {
     private Directory directory;
 
     {
@@ -45,14 +46,14 @@ public class LuceneService implements InitializingBean {
             for (File listFile : file.listFiles()) {
                 listFile.delete();
             }
-            directory = new MMapDirectory(Paths.get("C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\myindex"));
+            directory = FSDirectory.open(Paths.get("C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\myindex"));
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     // 空格分词器
-    private Analyzer analyzer;
+    private Analyzer pinyinAnalyzer;
 
     private Analyzer ikAnalyzer;
     private IndexWriterConfig conf;
@@ -61,11 +62,22 @@ public class LuceneService implements InitializingBean {
 
     IndexWriter indexWriter = null;
 
-    private void initIndex(MyAnalyzer myAnalyzer) throws Exception {
-//        this.analyzer = myAnalyzer;
-        this.analyzer = new MyPinyinAnalyzer(true);
+    private void initIndex() throws Exception {
+        this.pinyinAnalyzer = new MyPinyinAnalyzer(true);
         this.ikAnalyzer = new IKAnalyzer(true);
+
+        Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
+
+        // name字段使用ik分词器
+        fieldAnalyzers.put("name", new IKAnalyzer());
+        // title字段使用标准分词器
+        fieldAnalyzers.put("pinyin", new MyOnlyPinyinAnalyzer(true));
+        // 对于没有指定的分词器的字段，使用标准分词器
+        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new IKAnalyzer(), fieldAnalyzers);
+
         conf = new IndexWriterConfig(analyzer);
+
+        //conf = new IndexWriterConfig(pinyinAnalyzer);
         indexWriter = new IndexWriter(directory, conf);
         // 索引阶段结束
         Connection con = getCon();
@@ -89,6 +101,7 @@ public class LuceneService implements InitializingBean {
             log.info(re);
             Document doc = new Document();
             doc.add(new TextField("name", re, Field.Store.YES));
+            doc.add(new TextField("pinyin", re, Field.Store.YES));
             doc.add(new TextField("id", String.valueOf(id++), Field.Store.YES));
             indexWriter.addDocument(doc);
         }
@@ -129,9 +142,54 @@ public class LuceneService implements InitializingBean {
         return conn;
     }
 
-    public List<String> search(String filed, String query) throws IOException {
+    public List<String> search(String fieldId, String query) throws IOException {
 
-        TokenStream tokenStream = ikAnalyzer.tokenStream(filed, query);
+        PhraseQuery tmpQuery = this.phraseQuery("name", query);
+
+        PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
+
+        // 返回Top5的结果
+        int resultTopN = 5;
+
+        long start = System.nanoTime();
+        ScoreDoc[] scoreDocs = searcher.search(tmpQuery, resultTopN).scoreDocs;
+        long end = System.nanoTime();
+        log.info("name召回花费：{}", end - start);
+        List<String> list = new ArrayList<>();
+        for (int i = 0; i < scoreDocs.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            list.add("name命中==>" + doc.get("id") + "==>" + doc.get("name"));
+        }
+
+        long start1 = System.nanoTime();
+        ScoreDoc[] scoreDocs1 = searcher.search(pinyinQuery, resultTopN).scoreDocs;
+        long end1 = System.nanoTime();
+        log.info("pinyin召回花费：{}", end1 - start1);
+        for (int i = 0; i < scoreDocs1.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs1[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            list.add("pinyin命中==>" + doc.get("id") + "==>" + doc.get("name"));
+        }
+
+        return list;
+
+    }
+
+    private PhraseQuery phrasePinyinQuery(String fieldId, String query) throws IOException {
+        String[] param = query.split(" ");
+        PhraseQuery.Builder builder = new PhraseQuery.Builder();
+        for (String term : param) {
+            builder.add(new Term(fieldId, term));
+        }
+        builder.setSlop(10);
+        return builder.build();
+    }
+
+    private PhraseQuery phraseQuery(String fieldId, String query) throws IOException {
+        TokenStream tokenStream = ikAnalyzer.tokenStream(fieldId, query);
         CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
         tokenStream.reset();//必须
         List<String> terms = new ArrayList<>();
@@ -146,50 +204,18 @@ public class LuceneService implements InitializingBean {
 
         PhraseQuery.Builder builder = new PhraseQuery.Builder();
         for (String term : terms) {
-            builder.add(new Term(filed, term));
+            builder.add(new Term(fieldId, term));
         }
 
-        Query tmpQuery = builder.build();
+        builder.setSlop(10);
 
-        // 返回Top5的结果
-        int resultTopN = 5;
-
-        long start = System.nanoTime();
-        ScoreDoc[] scoreDocs = searcher.search(tmpQuery, resultTopN).scoreDocs;
-        long end = System.nanoTime();
-        log.info("召回花费：{}", end - start);
-        List<String> list1 = new ArrayList<>();
-        for (int i = 0; i < scoreDocs.length; i++) {
-            ScoreDoc scoreDoc = scoreDocs[i];
-            // 输出满足查询条件的 文档号
-            Document doc = searcher.doc(scoreDoc.doc);
-            list1.add(doc.get("id") + "==>" + doc.get("name"));
-        }
-
-        return list1;
-
+        return builder.build();
     }
 
     @Override
     public void afterPropertiesSet() throws Exception {
-        /*BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
-        String modelDirNew = "D:\\MavenRepo\\com\\bird\\segment\\bird-segment-server\\2.0.6-RELEASE\\segment";
-        Set<ExtendType> probExt = new HashSet();
-        Set<ExtendType> compExt = new HashSet();
-        probExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.SYNONYM);
-        compExt.add(ExtendType.HYPERNYM);
-        compExt.add(ExtendType.ARIBIC_PARSE);
-        birdExtendAnalyzer.init(modelDirNew, probExt, compExt);
-
-        MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
-
-        TermSearchQueryTest termQueryTest = new TermSearchQueryTest();
-        termQueryTest.doDemo(analyzer);*/
-
         //ik
-        initIndex(null);
+        initIndex();
         //查询阶段
         IndexReader reader = DirectoryReader.open(indexWriter);
         searcher = new IndexSearcher(reader);

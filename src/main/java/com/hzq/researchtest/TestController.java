@@ -1,11 +1,8 @@
 package com.hzq.researchtest;
 
-import com.alibaba.fastjson.JSON;
-import com.bird.segment.extend.IExtendAnalyzer;
-import com.hzq.researchtest.service.LuceneService;
+import com.hzq.researchtest.service.LuceneMultiFieldService;
 import com.hzq.researchtest.service.ResultResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.lucene.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -23,14 +20,17 @@ import java.util.List;
 @Slf4j
 public class TestController {
 
+    /*@Autowired
+    private LuceneService luceneService;*/
+
     @Autowired
-    private LuceneService luceneService;
+    private LuceneMultiFieldService luceneMultiFieldService;
 
     @GetMapping(value = "/test")
-    public ResultResponse<List<String>> test(@RequestParam("field") String field,@RequestParam("query") String query){
+    public ResultResponse<List<String>> test(@RequestParam("field") String field, @RequestParam("query") String query) {
 
         try {
-            List<String> name = luceneService.search(field, query);
+            List<String> name = luceneMultiFieldService.search(field, query);
             return ResultResponse.success(name);
         } catch (IOException e) {
             throw new RuntimeException(e);

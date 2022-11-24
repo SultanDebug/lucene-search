@@ -1,10 +1,7 @@
 package com.hzq.researchtest.test;
 
-import com.bird.segment.core.common.Token;
 import com.bird.segment.extend.BirdExtendAnalyzer;
 import com.bird.segment.extend.ExtendType;
-import com.bird.segment.extend.IExtendAnalyzer;
-import com.bird.segment.init.AnalyzerIniter;
 import com.hzq.researchtest.test.analyzer.MyAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
@@ -12,7 +9,10 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
-import org.apache.lucene.search.*;
+import org.apache.lucene.search.IndexSearcher;
+import org.apache.lucene.search.Query;
+import org.apache.lucene.search.ScoreDoc;
+import org.apache.lucene.search.TermQuery;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.MMapDirectory;
 
@@ -20,8 +20,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -51,9 +49,9 @@ public class TermQueryTest {
 
     IndexWriter indexWriter = null;
 
-    private void initIndex() throws Exception{
+    private void initIndex() throws Exception {
         indexWriter = new IndexWriter(directory, conf);
-        Document doc ;
+        Document doc;
         // 0
         doc = new Document();
         doc.add(new TextField("content", "同义词标签数量", Field.Store.YES));
@@ -122,18 +120,18 @@ public class TermQueryTest {
         // 返回Top5的结果
         int resultTopN = 5;
 
-        ScoreDoc [] scoreDocs = searcher.search(query, resultTopN).scoreDocs;
+        ScoreDoc[] scoreDocs = searcher.search(query, resultTopN).scoreDocs;
 
-        System.out.println("Total Result Number: "+scoreDocs.length+"");
+        System.out.println("Total Result Number: " + scoreDocs.length + "");
         for (int i = 0; i < scoreDocs.length; i++) {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
-            System.out.println("result"+i+": 文档"+scoreDoc.doc+"");
+            System.out.println("result" + i + ": 文档" + scoreDoc.doc + "");
         }
 
     }
 
-    public static void main(String[] args) throws Exception{
+    public static void main(String[] args) throws Exception {
 
         BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
         String modelDirNew = "D:\\MavenRepo\\com\\bird\\segment\\bird-segment-server\\2.0.6-RELEASE\\segment";
@@ -148,7 +146,7 @@ public class TermQueryTest {
         //IKAnalyzer ikAnalyzer = new IKAnalyzer();
 
 
-        String arr[] = {"我是中国人","同义词数量爆棚"};
+        String arr[] = {"我是中国人", "同义词数量爆棚"};
         MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
 
 

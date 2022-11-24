@@ -1,16 +1,13 @@
 package com.hzq.researchtest.test.analyzer;
 
-import com.bird.segment.core.common.Token;
 import com.bird.segment.extend.BirdExtendAnalyzer;
 import com.bird.segment.extend.ExtendType;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.StringReader;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,11 +16,12 @@ import java.util.Set;
  * @date 2022/11/17 21:40
  */
 public class MyAnalyzer extends Analyzer {
-    BirdExtendAnalyzer birdExtendAnalyzer ;
+    BirdExtendAnalyzer birdExtendAnalyzer;
 
-    public MyAnalyzer(BirdExtendAnalyzer birdExtendAnalyzer){
+    public MyAnalyzer(BirdExtendAnalyzer birdExtendAnalyzer) {
         this.birdExtendAnalyzer = birdExtendAnalyzer;
     }
+
     @Override
     protected TokenStreamComponents createComponents(String s) {
         return new TokenStreamComponents(new MyTermNoResetTokenizer(birdExtendAnalyzer));
@@ -47,11 +45,11 @@ public class MyAnalyzer extends Analyzer {
         String arr[] = {"author"};
         MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
 
-        for(int i = 0; i< arr.length; i++) {
-            TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]) );
+        for (int i = 0; i < arr.length; i++) {
+            TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));
             CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
             tokenStream.reset();//必须
-            while(tokenStream.incrementToken()) {
+            while (tokenStream.incrementToken()) {
                 System.out.println(termAtt.toString());
             }
             System.out.println("===============================");
