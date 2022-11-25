@@ -9,10 +9,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>com.hzq</groupId>
-    <artifactId>research-test</artifactId>
+    <artifactId>lucene-search</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>research-test</name>
-    <description>research-test</description>
+    <name>lucene-search</name>
+    <description>lucene-search</description>
     <properties>
         <java.version>1.8</java.version>
     </properties>
