@@ -46,7 +46,7 @@ public class MyIkAnalyzer {
             while (tokenStream.incrementToken()) {
                 System.out.println(termAtt.toString() + ":" + offsetAttribute.startOffset() + "/" + offsetAttribute.endOffset() + "==>" + positionIncrementAttribute.getPositionIncrement());
             }
-            System.out.println("===============================");
+            System.out.println("================================");
             tokenStream.close();//必须
         }
         ikAnalyzer.close();
