@@ -32,7 +32,7 @@ public class TestController {
         try {
             List<String> name = luceneMultiFieldService.search(field, query);
             return ResultResponse.success(name);
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }

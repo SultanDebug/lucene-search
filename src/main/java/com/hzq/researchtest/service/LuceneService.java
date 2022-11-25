@@ -1,7 +1,7 @@
 package com.hzq.researchtest.service;
 
 import com.hzq.researchtest.test.analyzer.MyAnalyzer;
-import com.hzq.researchtest.test.analyzer.MyPinyinAnalyzer;
+import com.hzq.researchtest.analyzer.MyPinyinAnalyzer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;

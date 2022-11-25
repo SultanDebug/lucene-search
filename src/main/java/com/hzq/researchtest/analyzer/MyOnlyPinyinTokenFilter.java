@@ -1,4 +1,4 @@
-package com.hzq.researchtest.test.analyzer;
+package com.hzq.researchtest.analyzer;
 
 import com.hzq.researchtest.util.PinyinUtil;
 import org.apache.commons.lang3.StringUtils;
@@ -20,6 +20,7 @@ import java.io.IOException;
 public class MyOnlyPinyinTokenFilter extends TokenFilter {
     private CharTermAttribute termAtt;
     private PositionIncrementAttribute posIncrAtt;
+
     private OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
     private int skippedPositions;
     private String term;
@@ -80,12 +81,8 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
                 String pinyinTerm = PinyinUtil.termToPinyin(term);
                 termAtt.copyBuffer(pinyinTerm.toCharArray(), 0, pinyinTerm.length());
                 posIncrAtt.setPositionIncrement(1);
-                /*if (skippedPositions != 0) {
-                    posIncrAtt.setPositionIncrement(posIncrAtt.getPositionIncrement() + skippedPositions);
-                }*/
                 return true;
             }
-            /*skippedPositions += posIncrAtt.getPositionIncrement();*/
             return true;
         } else {
             return false;

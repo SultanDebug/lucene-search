@@ -1,4 +1,4 @@
-package com.hzq.researchtest.test.analyzer;
+package com.hzq.researchtest.analyzer;
 
 import com.hzq.researchtest.util.PinyinUtil;
 import org.apache.commons.lang3.StringUtils;

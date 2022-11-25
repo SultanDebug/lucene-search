@@ -1,4 +1,4 @@
-package com.hzq.researchtest.test.analyzer;
+package com.hzq.researchtest.analyzer;
 
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;

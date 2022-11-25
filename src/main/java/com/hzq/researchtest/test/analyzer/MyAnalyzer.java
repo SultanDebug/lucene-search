@@ -24,7 +24,7 @@ public class MyAnalyzer extends Analyzer {
 
     @Override
     protected TokenStreamComponents createComponents(String s) {
-        return new TokenStreamComponents(new MyTermNoResetTokenizer(birdExtendAnalyzer));
+        return new TokenStreamComponents(new MyTermTokenizer(birdExtendAnalyzer));
     }
 
     public static void main(String[] args) throws Exception {
@@ -42,7 +42,7 @@ public class MyAnalyzer extends Analyzer {
         //IKAnalyzer ikAnalyzer = new IKAnalyzer();
 
 
-        String arr[] = {"author"};
+        String arr[] = {"我是中国人"};
         MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
 
         for (int i = 0; i < arr.length; i++) {

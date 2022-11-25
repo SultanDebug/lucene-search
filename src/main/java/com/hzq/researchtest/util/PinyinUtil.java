@@ -25,7 +25,12 @@ public class PinyinUtil {
         StringBuilder pinyin = new StringBuilder();
         for (char c : source.toCharArray()) {
             try {
-                String[] strings = PinyinHelper.toHanyuPinyinStringArray(c,format);
+                String[] strings ;
+                if(c >= 'a' && c <= 'z'){
+                    strings = new String[]{String.valueOf(c)};
+                }else{
+                    strings = PinyinHelper.toHanyuPinyinStringArray(c,format);
+                }
                 if(strings!=null && strings.length>0){
                     pinyin.append(strings[0]);
                 }
@@ -48,7 +53,12 @@ public class PinyinUtil {
         StringBuilder pinyin = new StringBuilder();
         for (char c : source.toCharArray()) {
             try {
-                String[] strings = PinyinHelper.toHanyuPinyinStringArray(c,format);
+                String[] strings ;
+                if(c >= 'a' && c <= 'z'){
+                    strings = new String[]{String.valueOf(c)};
+                }else{
+                    strings = PinyinHelper.toHanyuPinyinStringArray(c,format);
+                }
                 if(strings!=null && strings.length>0){
                     pinyin.append(strings[0].charAt(0));
                 }
