@@ -86,8 +86,8 @@ public class LuceneMultiFieldService implements InitializingBean {
         Connection con = getCon();
         List<String> res = new ArrayList<>();
         Statement stmt = con.createStatement();
-        int size = 100;
-        for (int i = 0; i < 1; i++) {
+        int size = 10000;
+        for (int i = 0; i < 100; i++) {
             List<String> tmps = query(i, stmt, size);
             if (tmps.size() < size) {
                 break;
@@ -100,14 +100,19 @@ public class LuceneMultiFieldService implements InitializingBean {
         long start = System.currentTimeMillis();
         log.info("索引构建开始：{}", start);
         int id = 0;
+        long sysTime = System.currentTimeMillis();
         for (String re : res) {
-            log.info(re);
             Document doc = new Document();
+            //文档标准化，特殊字符、大小写、简繁、全半等
             doc.add(new TextField("name", re, Field.Store.YES));
             doc.add(new TextField("pinyin", re, Field.Store.NO));
             doc.add(new TextField("jianpin", re, Field.Store.NO));
             doc.add(new TextField("id", String.valueOf(id++), Field.Store.YES));
             indexWriter.addDocument(doc);
+            if(id%10000==0){
+                log.info("加载进度：{}，花费：{}",id,System.currentTimeMillis()-sysTime);
+                sysTime = System.currentTimeMillis();
+            }
         }
         indexWriter.commit();
         log.info("索引构建结束：{}", System.currentTimeMillis() - start);
@@ -148,11 +153,11 @@ public class LuceneMultiFieldService implements InitializingBean {
 
     public List<String> search(String fieldId, String query) throws Exception {
 
-        PhraseQuery tmpQuery = this.phraseQuery("name", query);
+        /*PhraseQuery tmpQuery = this.phraseQuery("name", query);
 
         PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
 
-        TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);
+        TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);*/
 
         BooleanQuery booleanQuery = this.seggestQuery(query);
 

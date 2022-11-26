@@ -59,8 +59,11 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         }*/
 
         term = termAtt.toString();
-        if (StringUtils.isNotBlank(prefix) && term.length() >= minTermLength) {
+        if (StringUtils.isNotEmpty(prefix) && term.length() >= minTermLength) {
             while (true) {
+                if(StringUtils.isEmpty(prefix)){
+                    return false;
+                }
                 char c = prefix.charAt(0);
                 prefix = prefix.substring(1);
                 String pinyinTerm = PinyinUtil.termToPinyin(String.valueOf(c));

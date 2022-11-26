@@ -39,6 +39,7 @@ public class MyJianpinTokenizer extends Tokenizer {
             termAtt.copyBuffer(new char[]{}, 0, 0);
             termAtt.resizeBuffer(0);
             termAtt.setLength(0);
+            posIncrAtt.setPositionIncrement(1);
             offsetAtt.setOffset(0, 0);
             return true;
         }
