@@ -12,6 +12,11 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
+ * 1.布尔查询
+ * 2.字段分分词器
+ * 3.拼音分词器
+ * 4.前缀查询，短语查询，拼音倒排，简拼查询  youxian公司
+ * 5.增量索引，索引合并
  * @author Huangzq
  * @description
  * @date 2022/11/17 19:49
