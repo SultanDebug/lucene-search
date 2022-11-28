@@ -1,4 +1,4 @@
-package com.hzq.researchtest.service;
+package com.hzq.researchtest.test.analyzer;
 
 import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
@@ -12,6 +12,7 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.*;
+import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -33,7 +34,7 @@ import java.util.Map;
  * @description
  * @date 2022/11/19 13:52
  */
-@Service
+//@Service
 @Slf4j
 public class LuceneMultiFieldService implements InitializingBean {
     private Directory directory;
@@ -87,7 +88,7 @@ public class LuceneMultiFieldService implements InitializingBean {
         List<String> res = new ArrayList<>();
         Statement stmt = con.createStatement();
         int size = 10000;
-        for (int i = 0; i < 100; i++) {
+        for (int i = 0; i < 1; i++) {
             List<String> tmps = query(i, stmt, size);
             if (tmps.size() < size) {
                 break;
@@ -152,19 +153,25 @@ public class LuceneMultiFieldService implements InitializingBean {
     }
 
     public List<String> search(String fieldId, String query) throws Exception {
+        //降维 布尔or 召回
+        QueryParser queryParser = new QueryParser("name", ikAnalyzer);
+        Query parse = queryParser.parse("name:" + query);
 
-        /*PhraseQuery tmpQuery = this.phraseQuery("name", query);
+        //原词分词召回
+        PhraseQuery tmpQuery = this.phraseQuery("name", query);
 
+        //原词拼音分词召回
         PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
 
-        TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);*/
+        //简拼全词召回
+        TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);
 
         BooleanQuery booleanQuery = this.seggestQuery(query);
 
         // 返回Top5的结果
         int resultTopN = 5;
 
-        long start = System.nanoTime();
+        /*long start = System.nanoTime();
         ScoreDoc[] scoreDocs = searcher.search(booleanQuery, resultTopN).scoreDocs;
         long end = System.nanoTime();
         log.info("【布尔】召回花费：{}", end - start);
@@ -173,10 +180,10 @@ public class LuceneMultiFieldService implements InitializingBean {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【布尔】命中==>" + doc.get("id") + "==>" + doc.get("name"));
-        }
+            list.add("【布尔】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
+        }*/
 
-        /*long start = System.nanoTime();
+        long start = System.nanoTime();
         ScoreDoc[] scoreDocs = searcher.search(tmpQuery, resultTopN).scoreDocs;
         long end = System.nanoTime();
         log.info("【名称】召回花费：{}", end - start);
@@ -185,7 +192,7 @@ public class LuceneMultiFieldService implements InitializingBean {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【名称】命中==>" + doc.get("id") + "==>" + doc.get("name"));
+            list.add("【名称】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         long start1 = System.nanoTime();
@@ -196,7 +203,7 @@ public class LuceneMultiFieldService implements InitializingBean {
             ScoreDoc scoreDoc = scoreDocs1[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【拼音】命中==>" + doc.get("id") + "==>" + doc.get("name"));
+            list.add("【拼音】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         long start2 = System.nanoTime();
@@ -207,23 +214,43 @@ public class LuceneMultiFieldService implements InitializingBean {
             ScoreDoc scoreDoc = scoreDocs2[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【简拼】命中==>" + doc.get("id") + "==>" + doc.get("name"));
-        }*/
+            list.add("【简拼】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
+        }
+
+        long start3 = System.nanoTime();
+        ScoreDoc[] scoreDocs3 = searcher.search(parse, resultTopN).scoreDocs;
+        long end3 = System.nanoTime();
+        log.info("【原词或召回】召回花费：{}", end3 - start3);
+        for (int i = 0; i < scoreDocs3.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs3[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            list.add("【原词或召回】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
+        }
 
         return list;
 
     }
 
     private BooleanQuery seggestQuery(String query) throws Exception{
+        //降维 布尔or 召回
+        QueryParser queryParser = new QueryParser("name", ikAnalyzer);
+        Query parse = queryParser.parse("name:" + query);
+
+        //原词分词召回
         PhraseQuery tmpQuery = this.phraseQuery("name", query);
 
+        //原词拼音分词召回
         PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
 
+        //简拼全词召回
         TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);
+
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         builder.add(tmpQuery, BooleanClause.Occur.SHOULD);
         builder.add(jianpinQuery, BooleanClause.Occur.SHOULD);
         builder.add(pinyinQuery, BooleanClause.Occur.SHOULD);
+        builder.add(parse, BooleanClause.Occur.SHOULD);
 
         return builder.build();
     }

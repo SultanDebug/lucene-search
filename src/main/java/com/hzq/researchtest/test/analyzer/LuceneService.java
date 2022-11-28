@@ -1,4 +1,4 @@
-package com.hzq.researchtest.service;
+package com.hzq.researchtest.test.analyzer;
 
 import com.hzq.researchtest.test.analyzer.MyAnalyzer;
 import com.hzq.researchtest.analyzer.MyPinyinAnalyzer;
