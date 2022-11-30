@@ -1,6 +1,5 @@
-package com.hzq.researchtest.service.index.load;
+package com.hzq.researchtest.service.multiindex;
 
-import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
@@ -13,60 +12,97 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.MMapDirectory;
 import org.springframework.stereotype.Service;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author Huangzq
  * @description
- * @date 2022/11/28 16:39
+ * @date 2022/11/30 17:18
  */
 @Service
 @Slf4j
-public class IndexLoadService {
+public class MultiIndexLoadService {
+    private String fsPath = "C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\multi_index\\fsindex";
+    private String incrPath = "C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\multi_index\\mmapindex";
 
-    private Directory directory;
+    private Directory fsDirectory;
 
-    private IndexSearcher searcher;
+    private IndexSearcher fsSearcher;
 
-    private IndexReader reader;
+    private IndexReader fsReader;
 
-    private Analyzer pinyinAnalyzer;
+    private Directory incrDirectory;
+
+    private IndexSearcher incrSearcher;
+
+    private IndexReader incrReader;
 
     private Analyzer ikAnalyzer = new IKAnalyzer(true);
-    private MyJianpinAnalyzer jianpinAnalyzer = new MyJianpinAnalyzer();
 
-    public List<String> search(boolean updateFlag, String fieldId, String query) throws Exception {
+    public void indexUpdate(boolean isInit){
+        try {
+            if(fsReader!=null){
+                fsReader.close();
+            }
+            fsDirectory = FSDirectory.open(Paths.get(fsPath));
+            fsReader = DirectoryReader.open(fsDirectory);
+            fsSearcher = new IndexSearcher(fsReader);
 
-        if (directory == null) {
+            if(!isInit){
+                if(incrReader!=null){
+                    incrReader.close();
+                }
+                incrDirectory = MMapDirectory.open(Paths.get(incrPath));
+                incrReader = DirectoryReader.open(incrDirectory);
+                incrSearcher = new IndexSearcher(incrReader);
+            }
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public Map<String,List<String>> search(String query) throws Exception{
+        if(fsDirectory == null){
             {
                 try {
-                    directory = FSDirectory.open(Paths.get("C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\myindex"));
-                    reader = DirectoryReader.open(directory);
-                    searcher = new IndexSearcher(reader);
+                    fsDirectory = FSDirectory.open(Paths.get(fsPath));
+                    fsReader = DirectoryReader.open(fsDirectory);
+                    fsSearcher = new IndexSearcher(fsReader);
+                    if(incrSearcher!=null){
+                        incrDirectory = MMapDirectory.open(Paths.get(incrPath));
+                        incrReader = DirectoryReader.open(incrDirectory);
+                        incrSearcher = new IndexSearcher(incrReader);
+                    }
+
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
             }
         }
 
-        if (updateFlag) {
-            try {
-                if (reader != null) {
-                    reader.close();
-                }
-                directory = FSDirectory.open(Paths.get("C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\myindex"));
-                reader = DirectoryReader.open(directory);
-                searcher = new IndexSearcher(reader);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
+        Map<String,List<String>> map = new HashMap<>();
+
+        List<String> fsList = this.search(fsSearcher, query);
+        map.put("fs",fsList);
+        if(incrSearcher!=null){
+            List<String> incrList = this.search(incrSearcher, query);
+            map.put("incr",incrList);
         }
+
+        return map;
+    }
+
+    public List<String> search(IndexSearcher searcher , String query) throws Exception {
         //降维 布尔or 召回
         QueryParser queryParser = new QueryParser("name", ikAnalyzer);
         Query parse = queryParser.parse("name:" + query);
@@ -106,7 +142,7 @@ public class IndexLoadService {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【名称】命中==>" + doc.get("id") + "==>" + doc.get("name") + "==>" + scoreDoc.score);
+            list.add("【名称】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         long start1 = System.nanoTime();
@@ -117,7 +153,7 @@ public class IndexLoadService {
             ScoreDoc scoreDoc = scoreDocs1[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【拼音】命中==>" + doc.get("id") + "==>" + doc.get("name") + "==>" + scoreDoc.score);
+            list.add("【拼音】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         long start2 = System.nanoTime();
@@ -128,7 +164,7 @@ public class IndexLoadService {
             ScoreDoc scoreDoc = scoreDocs2[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【简拼】命中==>" + doc.get("id") + "==>" + doc.get("name") + "==>" + scoreDoc.score);
+            list.add("【简拼】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         long start3 = System.nanoTime();
@@ -139,14 +175,14 @@ public class IndexLoadService {
             ScoreDoc scoreDoc = scoreDocs3[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            list.add("【原词或召回】命中==>" + doc.get("id") + "==>" + doc.get("name") + "==>" + scoreDoc.score);
+            list.add("【原词或召回】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }
 
         return list;
 
     }
 
-    private BooleanQuery seggestQuery(String query) throws Exception {
+    private BooleanQuery seggestQuery(String query) throws Exception{
         //降维 布尔or 召回
         QueryParser queryParser = new QueryParser("name", ikAnalyzer);
         Query parse = queryParser.parse("name:" + query);
@@ -170,7 +206,7 @@ public class IndexLoadService {
     }
 
     private TermQuery jianpinQuery(String fieldId, String query) throws IOException {
-        return new TermQuery(new Term(fieldId, query));
+        return new TermQuery(new Term(fieldId,query));
     }
 
     private PhraseQuery phrasePinyinQuery(String fieldId, String query) throws IOException {
@@ -206,4 +242,5 @@ public class IndexLoadService {
 
         return builder.build();
     }
+
 }
