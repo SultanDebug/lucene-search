@@ -1,7 +1,5 @@
 package com.hzq.researchtest.test.analyzer;
 
-import com.bird.segment.extend.BirdExtendAnalyzer;
-import com.bird.segment.extend.ExtendType;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -15,8 +13,8 @@ import java.util.Set;
  * @description
  * @date 2022/11/17 21:40
  */
-public class MyAnalyzer extends Analyzer {
-    BirdExtendAnalyzer birdExtendAnalyzer;
+public class MyAnalyzer /*extends Analyzer*/ {
+    /*BirdExtendAnalyzer birdExtendAnalyzer;
 
     public MyAnalyzer(BirdExtendAnalyzer birdExtendAnalyzer) {
         this.birdExtendAnalyzer = birdExtendAnalyzer;
@@ -56,5 +54,5 @@ public class MyAnalyzer extends Analyzer {
             tokenStream.close();//必须
         }
         analyzer.close();
-    }
+    }*/
 }

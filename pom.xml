@@ -19,7 +19,18 @@
     <dependencies>
         <dependency>
             <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <artifactId>spring-boot-starter-web</artifactId>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-log4j2</artifactId>
         </dependency>
 
         <dependency>
@@ -31,54 +42,21 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
+            <exclusions>
+                <exclusion>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-starter-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
 
-        <!--<dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-core</artifactId>
-            &lt;!&ndash;<version>9.4.1</version>&ndash;&gt;
-            <version>7.5.0</version>
-        </dependency>-->
 
-        <dependency>
-            <groupId>com.hankcs</groupId>
-            <artifactId>hanlp</artifactId>
-            <version>portable-1.8.3</version>
-        </dependency>
-
-
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-lang3</artifactId>
-            <version>3.4</version>
-        </dependency>
-
-        <!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-analyzers-common -->
-        <!--<dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-analyzers-common</artifactId>
-            <version>7.5.0</version>
-            &lt;!&ndash;            <version>7.7.3</version>&ndash;&gt;
-        </dependency>
-
-        <dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-highlighter</artifactId>
-            <version>7.5.0</version>
-        </dependency>-->
-
-        <!-- https://mvnrepository.com/artifact/org.apache.lucene/lucene-core -->
         <dependency>
             <groupId>org.apache.lucene</groupId>
             <artifactId>lucene-core</artifactId>
             <version>7.5.0</version>
         </dependency>
-        <!--<dependency>
-            <groupId>org.apache.lucene</groupId>
-            <artifactId>lucene-queries</artifactId>
-            <version>7.5.0</version>
-        </dependency>-->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-lang3</artifactId>
@@ -148,11 +126,11 @@
         <!--            <version>5.5.0</version>-->
         <!--        </dependency>-->
 
-        <dependency>
+        <!--<dependency>
             <groupId>com.bird.segment</groupId>
             <artifactId>bird-segment-server</artifactId>
             <version>2.0.6-RELEASE</version>
-        </dependency>
+        </dependency>-->
 
         <dependency>
             <groupId>com.jianggujin</groupId>
@@ -172,18 +150,9 @@
         </dependency>
 
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-web</artifactId>
-            <exclusions>
-                <exclusion>
-                    <groupId>org.springframework.boot</groupId>
-                    <artifactId>spring-boot-starter-logging</artifactId>
-                </exclusion>
-                <exclusion>
-                    <artifactId>hibernate-validator</artifactId>
-                    <groupId>org.hibernate.validator</groupId>
-                </exclusion>
-            </exclusions>
+            <groupId>com.bird.search</groupId>
+            <artifactId>bird-search-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
         </dependency>
 
     </dependencies>

@@ -1,8 +1,8 @@
 package com.hzq.researchtest;
 
 import com.hzq.researchtest.service.ResultResponse;
-import com.hzq.researchtest.service.multiindex.MultiIndexLoadService;
-import com.hzq.researchtest.service.multiindex.MultiIndexService;
+import com.hzq.researchtest.service.shardindex.ShardIndexMergeLoadService;
+import com.hzq.researchtest.service.shardindex.ShardIndexMergeService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,37 +25,37 @@ import java.util.Map;
  */
 @RestController
 @Slf4j
-public class TestMultiController {
+public class TestShardController {
     @Autowired
-    private MultiIndexLoadService indexLoadService;
+    private ShardIndexMergeLoadService shardIndexMergeLoadService;
 
 
     @Autowired
-    private MultiIndexService indexService;
+    private ShardIndexMergeService shardIndexMergeService;
 
-    @GetMapping(value = "/mult/query")
+    @GetMapping(value = "/shard/query")
     public ResultResponse<Map<String, List<String>>> query(@RequestParam("query") String query) {
 
-        Map<String, List<String>> name = indexLoadService.search(query);
+        Map<String, List<String>> name = shardIndexMergeLoadService.search(query);
         return ResultResponse.success(name);
     }
 
 
-    @GetMapping(value = "/mult/create")
+    @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create() {
-        indexService.initIndex();
+        shardIndexMergeService.initIndex();
         return ResultResponse.success();
     }
 
-    @GetMapping(value = "/mult/add")
+    @GetMapping(value = "/shard/add")
     public ResultResponse<String> add(@RequestParam("id") Long id, @RequestParam("data") String data) {
-        indexService.addIndex(id, data);
+        shardIndexMergeService.addIndex(id, data);
         return ResultResponse.success();
     }
 
-    @GetMapping(value = "/mult/merge")
+    @GetMapping(value = "/shard/merge")
     public ResultResponse<String> merge() {
-        indexService.indexMerge();
+        shardIndexMergeService.indexMerge();
         return ResultResponse.success();
     }
 }

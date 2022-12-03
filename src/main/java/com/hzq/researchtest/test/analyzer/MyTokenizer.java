@@ -1,6 +1,5 @@
 package com.hzq.researchtest.test.analyzer;
 
-import com.bird.segment.extend.BirdExtendAnalyzer;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -12,8 +11,8 @@ import java.io.IOException;
  * @description
  * @date 2022/11/17 21:40
  */
-public class MyTokenizer extends Tokenizer {
-    private BirdExtendAnalyzer birdExtendAnalyzer;
+public class MyTokenizer /*extends Tokenizer*/ {
+    /*private BirdExtendAnalyzer birdExtendAnalyzer;
 
     public MyTokenizer(BirdExtendAnalyzer birdExtendAnalyzer) {
         this.birdExtendAnalyzer = birdExtendAnalyzer;
@@ -67,7 +66,7 @@ public class MyTokenizer extends Tokenizer {
             }
         }
         return false;
-    }
+    }*/
 
 
 }

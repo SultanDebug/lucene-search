@@ -1,8 +1,5 @@
 package com.hzq.researchtest.test;
 
-import com.bird.segment.extend.BirdExtendAnalyzer;
-import com.bird.segment.extend.ExtendType;
-import com.hzq.researchtest.test.analyzer.MyAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.document.Document;
@@ -19,8 +16,6 @@ import org.apache.lucene.store.MMapDirectory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * @author Huangzq
@@ -133,7 +128,7 @@ public class TermQueryTest {
 
     public static void main(String[] args) throws Exception {
 
-        BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
+        /*BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
         String modelDirNew = "D:\\MavenRepo\\com\\bird\\segment\\bird-segment-server\\2.0.6-RELEASE\\segment";
         Set<ExtendType> probExt = new HashSet();
         Set<ExtendType> compExt = new HashSet();
@@ -151,6 +146,6 @@ public class TermQueryTest {
 
 
         TermQueryTest termQueryTest = new TermQueryTest();
-        termQueryTest.doDemo();
+        termQueryTest.doDemo();*/
     }
 }

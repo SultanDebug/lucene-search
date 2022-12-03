@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+
+    <Properties>
+        <Property name="LOG_PATH">/home/logs</Property>
+        <Property name="APP_NAME">lucene-search</Property>
+        <Property name="SYS_LOG_LEVEL">info</Property>
+        <Property name="BUS_LOG_LEVEL">debug</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- console -->
+        <Console name="CONSOLE" target="SYSTEM_OUT">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS}  [X-TraceId:%X{X-TraceId}] [%t] %-5level %logger{36} %L %M - %msg%n" />
+        </Console>
+
+        <!-- file for info level -->
+        <RollingFile name="INFO_FILE" fileName="${env:LOG_PATH}/${env:APP_NAME}/${env:APP_NAME}-info.log"
+                     filePattern="${env:LOG_PATH}/${env:APP_NAME}/back/${env:APP_NAME}-info_%d{yyyy-MM-dd}.gz">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [X-TraceId:%X{X-TraceId}] [%t] %-5level %logger{36} - %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="1" />
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+
+        <!-- file for error level -->
+        <RollingFile name="ERROR_FILE" fileName="${env:LOG_PATH}/${env:APP_NAME}/${env:APP_NAME}-error.log"
+                     filePattern="${env:LOG_PATH}/${env:APP_NAME}/back/${env:APP_NAME}-error_%d{yyyy-MM-dd}.gz">
+            <ThresholdFilter level="error" onMatch="ACCEPT" onMismatch="DENY" />
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} [X-TraceId:%X{X-TraceId}] [%t] %-5level %logger{36} - %msg%n" />
+            <Policies>
+                <TimeBasedTriggeringPolicy modulate="true" interval="1" />
+                <SizeBasedTriggeringPolicy size="100 MB"/>
+            </Policies>
+        </RollingFile>
+    </Appenders>
+
+    <Loggers>
+        <Root level="${env:SYS_LOG_LEVEL}">
+            <Appender-ref ref="CONSOLE" />
+            <Appender-ref ref="INFO_FILE" />
+            <Appender-ref ref="ERROR_FILE" />
+        </Root>
+        <Logger name="com.bird" level="${env:BUS_LOG_LEVEL}"></Logger>
+    </Loggers>
+</Configuration>

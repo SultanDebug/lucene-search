@@ -1,7 +1,5 @@
 package com.hzq.researchtest.test.analyzer;
 
-import com.bird.segment.core.common.Token;
-import com.bird.segment.extend.BirdExtendAnalyzer;
 import org.apache.lucene.analysis.Tokenizer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
@@ -14,8 +12,8 @@ import java.util.List;
  * @description
  * @date 2022/11/17 21:40
  */
-public class MyTermTokenizer extends Tokenizer {
-    private BirdExtendAnalyzer birdExtendAnalyzer;
+public class MyTermTokenizer /*extends Tokenizer*/ {
+    /*private BirdExtendAnalyzer birdExtendAnalyzer;
 
     String query = null;
     List<Token> list = null;
@@ -86,5 +84,5 @@ public class MyTermTokenizer extends Tokenizer {
         super.close();
         listPos = 0;
         query = null;
-    }
+    }*/
 }

@@ -1,13 +1,13 @@
 package com.hzq.researchtest;
 
-import org.junit.jupiter.api.Test;
+import org.junit.Assert;
+import org.junit.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
-@SpringBootTest
+//@SpringBootTest
 class ResearchTestApplicationTests {
 
     @Test
-    void contextLoads() {
+     void contextLoads() {
     }
-
 }

@@ -1,12 +1,15 @@
-package com.hzq.researchtest.service.multiindex;
+package com.hzq.researchtest.service.shardindex.shard;
 
 import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
+import org.apache.lucene.document.StringField;
 import org.apache.lucene.document.TextField;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
@@ -14,111 +17,147 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.apache.lucene.store.MMapDirectory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
-import org.springframework.util.Assert;
-import org.springframework.util.CollectionUtils;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
-import java.io.File;
-import java.io.IOException;
 import java.nio.file.Paths;
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 /**
  * @author Huangzq
  * @description
- * @date 2022/11/30 15:28
+ * @date 2022/12/2 10:01
  */
-@Service
 @Slf4j
-public class MultiIndexService {
-    @Autowired
-    private MultiIndexLoadService multiIndexLoadService;
+public class ShardIndexService {
+    private ShardIndexLoadService shardIndexLoadService;
 
+    private int shardNum;
     //文件系统索引
-    private String fsPath = "C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\multi_index\\fsindex";
+    private String fsPath ;
 
     //内存映射索引
-    private String incrPath = "C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\multi_index\\mmapindex";
-
-    private MyJianpinAnalyzer jianpinAnalyzer;
-    // 空格分词器
-    private Analyzer pinyinAnalyzer;
-    private Analyzer ikAnalyzer;
-
-
+    private String incrPath ;
 
     private Long id = 0L;
 
+    private List<Pair<String,Analyzer>> fieldConfigs;
 
     {
-        this.pinyinAnalyzer = new MyOnlyPinyinAnalyzer(true);
-        this.ikAnalyzer = new IKAnalyzer(true);
-        this.jianpinAnalyzer = new MyJianpinAnalyzer();
+        fieldConfigs = getCurIndexFieldConfig();
     }
 
-    public IndexWriterConfig getConfig(){
+    public void setShardNum(int shardNum) {
+        this.shardNum = shardNum;
+    }
+
+    public void setShardIndexLoadService(ShardIndexLoadService shardIndexLoadService) {
+        this.shardIndexLoadService = shardIndexLoadService;
+    }
+
+    public void setFsPath(String fsPath, int shardNum,String fsPathName) {
+        this.fsPath = fsPath + "\\"+shardNum+ "\\"+fsPathName;
+        this.shardNum = shardNum;
+    }
+
+    public void setIncrPath(String incrPath,int shardNum,String incrPathName) {
+        this.incrPath = incrPath+ "\\"+shardNum+ "\\"+incrPathName;
+        this.shardNum = shardNum;
+    }
+
+
+
+    private IndexWriterConfig getConfig(List<Pair<String,Analyzer>> fieldConfig){
         Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
-        // name字段使用ik分词器
-        fieldAnalyzers.put("name", ikAnalyzer);
-        // 拼音字段使用标准分词器
-        fieldAnalyzers.put("pinyin", pinyinAnalyzer);
-        // 简拼字段使用标准分词器
-        fieldAnalyzers.put("jianpin", jianpinAnalyzer);
+
+        for (Pair<String, Analyzer> pair : fieldConfig) {
+            fieldAnalyzers.put(pair.getLeft(),pair.getRight());
+        }
+
         // 对于没有指定的分词器的字段，使用标准分词器
-        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(ikAnalyzer, fieldAnalyzers);
+        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new IKAnalyzer(true), fieldAnalyzers);
 
         IndexWriterConfig conf = new IndexWriterConfig(analyzer);
         conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         return conf;
     }
 
-    public void indexMerge() {
+    private List<Pair<String,Analyzer>> getCurIndexFieldConfig(){
+        List<Pair<String,Analyzer>> list = new ArrayList<>();
+        // name字段使用ik分词器
+        list.add(Pair.of("name", new IKAnalyzer(true)));
+        // 拼音字段使用标准分词器
+        list.add(Pair.of("pinyin", new MyOnlyPinyinAnalyzer(true)));
+        // 简拼字段使用标准分词器
+        list.add(Pair.of("jianpin", new MyJianpinAnalyzer()));
+        return list;
+    }
+
+    public Long indexMerge() {
+        if(StringUtils.isBlank(fsPath) || StringUtils.isBlank(incrPath) || shardIndexLoadService ==null){
+            log.error("索引参数未配置！");
+            return null;
+        }
         long start = System.currentTimeMillis();
         Directory fsDirectory = null;
         IndexWriter mainIndex = null;
 
         Directory incrDirectory = null;
         IndexWriter incrIndex = null;
-
+        Long merge = null;
         try {
-            IndexWriterConfig mainConf = this.getConfig();
-            fsDirectory =FSDirectory.open(Paths.get(fsPath));
+            IndexWriterConfig mainConf = this.getConfig(fieldConfigs);
+            fsDirectory = FSDirectory.open(Paths.get(fsPath));
+
+            IndexWriterConfig incrConf = this.getConfig(fieldConfigs);
+            incrDirectory = MMapDirectory.open(Paths.get(incrPath));
+
+            String[] fsFiles = fsDirectory.listAll();
+            String[] incrFiles = incrDirectory.listAll();
+
+            if(fsFiles==null || fsFiles.length==0 || Arrays.stream(fsFiles).noneMatch(o->o.startsWith("segments"))){
+                log.info("分片【"+shardNum+"】主索引数据文件缺失");
+                return 0L;
+            }
+
+            if(incrFiles==null || incrFiles.length==0 || Arrays.stream(incrFiles).noneMatch(o->o.startsWith("segments"))){
+                log.info("分片【"+shardNum+"】增量索引数据文件缺失");
+                return 0L;
+            }
+
             mainIndex = new IndexWriter(fsDirectory, mainConf);
 
-            IndexWriterConfig incrConf = this.getConfig();
-            incrDirectory =MMapDirectory.open(Paths.get(incrPath));
-
-            long merge = mainIndex.addIndexes(incrDirectory);
+            merge = mainIndex.addIndexes(incrDirectory);
             mainIndex.flush();
             mainIndex.commit();
 
             incrIndex = new IndexWriter(incrDirectory, incrConf);
+
             incrIndex.deleteAll();
             incrIndex.flush();
             incrIndex.commit();
 
             //通知load端重新加载
-            multiIndexLoadService.indexUpdate(false);
-            log.info("合并数量：{},花费：{}",merge,System.currentTimeMillis()-start);
+            shardIndexLoadService.indexUpdate(false);
+            log.info("分片【"+shardNum+"】合并数量：{},花费：{}",merge,System.currentTimeMillis()-start);
         }catch (Exception  e){
             log.error("索引合并失败：{}",e.getMessage(),e);
         }finally {
             try {
                 //fsDirectory.close();
-                mainIndex.close();
+                if(mainIndex!=null){
+                    mainIndex.close();
+                }
 
                 //incrDirectory.close();
-                incrIndex.close();
+                if(incrIndex!=null){
+                    incrIndex.close();
+                }
             }catch (Exception e){
                 log.error("合并索引关闭失败：{}",e.getMessage(),e);
             }
         }
+
+        return merge;
     }
 
     private void deleteDocForUpdate(String id,IndexWriter mainIndex,IndexWriter incrIndex){
@@ -127,23 +166,27 @@ public class MultiIndexService {
             long incr = incrIndex.deleteDocuments(new Term("id", id));
             mainIndex.flush();
             mainIndex.commit();
-            log.info("主索引删除：{}，增量索引删除：{}",main,incr);
+            log.info("分片【"+shardNum+"】主索引删除：{}，增量索引删除：{}",main,incr);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
     }
     public void addIndex(Long id , String data) {
+        if(StringUtils.isBlank(fsPath) || StringUtils.isBlank(incrPath) || shardIndexLoadService ==null){
+            log.error("索引参数未配置！");
+            return;
+        }
         Directory fsDirectory;
         IndexWriter mainIndex = null;
 
         Directory incrDirectory;
         IndexWriter incrIndex = null;
         try {
-            IndexWriterConfig mainConf = this.getConfig();
+            IndexWriterConfig mainConf = this.getConfig(fieldConfigs);
             fsDirectory =FSDirectory.open(Paths.get(fsPath));
             mainIndex = new IndexWriter(fsDirectory, mainConf);
 
-            IndexWriterConfig incrConf = this.getConfig();
+            IndexWriterConfig incrConf = this.getConfig(fieldConfigs);
             incrDirectory =MMapDirectory.open(Paths.get(incrPath));
             incrIndex = new IndexWriter(incrDirectory, incrConf);
 
@@ -154,8 +197,8 @@ public class MultiIndexService {
             //文档标准化，特殊字符、大小写、简繁、全半等
             doc.add(new TextField("name", data, Field.Store.YES));
             doc.add(new TextField("pinyin", data, Field.Store.NO));
-            doc.add(new TextField("jianpin", data, Field.Store.NO));
-            doc.add(new TextField("id", String.valueOf(id), Field.Store.YES));
+            doc.add(new StringField("jianpin", data, Field.Store.NO));
+            doc.add(new StringField("id", id.toString(), Field.Store.YES));
 
             mainIndex.deleteDocuments(new Term("id",String.valueOf(id)));
 
@@ -164,7 +207,7 @@ public class MultiIndexService {
             incrIndex.commit();
 
             //通知load端重新加载
-            multiIndexLoadService.indexUpdate(false);
+            shardIndexLoadService.indexUpdate(false);
 
             log.info("索引更新结束：{}", System.currentTimeMillis() - start);
         }catch (Exception e){
@@ -183,11 +226,15 @@ public class MultiIndexService {
 
     }
 
-    public void initIndex() {
+    public void initIndex(List<String> res) {
+        if(StringUtils.isBlank(fsPath) || StringUtils.isBlank(incrPath) || shardIndexLoadService ==null){
+            log.error("索引参数未配置！");
+            return;
+        }
         Directory fsDirectory = null;
         IndexWriter mainIndex = null;
         try {
-            IndexWriterConfig conf = this.getConfig();
+            IndexWriterConfig conf = this.getConfig(fieldConfigs);
             fsDirectory =FSDirectory.open(Paths.get(fsPath));
             mainIndex = new IndexWriter(fsDirectory, conf);
 
@@ -195,21 +242,6 @@ public class MultiIndexService {
             mainIndex.deleteAll();
             mainIndex.flush();
             mainIndex.commit();
-
-            // 索引阶段结束
-            Connection con = getCon();
-            List<String> res = new ArrayList<>();
-            Statement stmt = con.createStatement();
-            int size = 10000;
-            for (int i = 0; i < 100; i++) {
-                List<String> tmps = query(i, stmt, size);
-                if (tmps.size() < size) {
-                    break;
-                }
-                res.addAll(tmps);
-            }
-            stmt.close();
-            con.close();
 
             long start = System.currentTimeMillis();
             log.info("索引构建开始：{}", start);
@@ -219,8 +251,8 @@ public class MultiIndexService {
                 //文档标准化，特殊字符、大小写、简繁、全半等
                 doc.add(new TextField("name", re, Field.Store.YES));
                 doc.add(new TextField("pinyin", re, Field.Store.NO));
-                doc.add(new TextField("jianpin", re, Field.Store.NO));
-                doc.add(new TextField("id", String.valueOf(id++), Field.Store.YES));
+                doc.add(new StringField("jianpin", re, Field.Store.NO));
+                doc.add(new StringField("id", String.valueOf(id++), Field.Store.YES));
                 mainIndex.addDocument(doc);
                 if(id%10000==0){
                     log.info("加载进度：{}，花费：{}",id,System.currentTimeMillis()-sysTime);
@@ -230,7 +262,7 @@ public class MultiIndexService {
             mainIndex.flush();
             mainIndex.commit();
 
-            multiIndexLoadService.indexUpdate(true);
+            shardIndexLoadService.indexUpdate(true);
 
             log.info("索引构建结束：{}", System.currentTimeMillis() - start);
         }catch (Exception e){
@@ -244,41 +276,5 @@ public class MultiIndexService {
             }
 
         }
-
-
-    }
-
-
-    private List<String> query(int offset, Statement stmt, int size) {
-        int start = offset * size;
-        String Sql = "select name from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide limit " + start + " , " + size;
-
-        List<String> lists = new ArrayList<>();
-        try {
-            ResultSet rs = stmt.executeQuery(Sql);
-            while (rs.next()) {
-                lists.add(rs.getString("name").substring(1));
-            }
-            rs.close();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return lists;
-    }
-
-    private Connection getCon() {
-        Connection conn = null;
-        String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
-        try {
-            //注册（加载）驱动程序
-            Class.forName(driver);
-            //获取数据库接
-            conn = DriverManager.getConnection(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        return conn;
     }
 }
