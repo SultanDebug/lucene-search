@@ -1,30 +1,18 @@
 package com.hzq.researchtest.service.shardindex;
 
 import com.bird.search.utils.AsynUtil;
-import com.hzq.researchtest.config.ShardConfig;
 import com.hzq.researchtest.service.shardindex.shard.ShardIndexLoadService;
+import com.hzq.researchtest.service.shardindex.shard.ShardIndexService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.index.DirectoryReader;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.classic.QueryParser;
-import org.apache.lucene.search.*;
-import org.apache.lucene.store.FSDirectory;
-import org.apache.lucene.store.MMapDirectory;
-import org.springframework.beans.factory.InitializingBean;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -35,34 +23,43 @@ import java.util.stream.Collectors;
  */
 @Service
 @Slf4j
-public class ShardIndexMergeLoadService {
-    private static Map<Integer, ShardIndexLoadService> SHARD_LOAD_MAP = new HashMap<>();
-
-    private static ExecutorService executorService = Executors.newFixedThreadPool(ShardConfig.SHARD_NUM);
-
-    public static void initLoadMap(Integer shardId, ShardIndexLoadService service){
-        SHARD_LOAD_MAP.put(shardId,service);
-    }
-
-    public Map<String,List<String>> search(String query){
+public class ShardIndexMergeLoadService extends IndexCommonService {
+    /**
+     * Description:
+     *  搜索入口，并发搜索所有分片
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:33
+     */
+    public Map<String, List<String>> search(String index, String query) {
+        if (!this.checkIndex(index)) {
+            log.warn("索引不存在{}", index);
+            return Collections.emptyMap();
+        }
+        Map<Integer, Pair<ShardIndexService,ShardIndexLoadService>> indexLoadServiceMap = SHARD_INDEX_MAP.get(index);
+        if (indexLoadServiceMap == null) {
+            log.warn("索引不存在{}", index);
+            return null;
+        }
         long start = System.currentTimeMillis();
         try {
             List<String> fsList = new ArrayList<>();
             List<String> incrList = new ArrayList<>();
 
-            List<Supplier<Map<String, List<String>>>> list = SHARD_LOAD_MAP.values().stream()
-                    .map(service -> (Supplier<Map<String, List<String>>>) () -> service.search(query))
+            List<Supplier<Map<String, List<String>>>> list = indexLoadServiceMap.values().stream()
+                    .map(service -> (Supplier<Map<String, List<String>>>) () -> service.getRight().search(query))
                     .collect(Collectors.toList());
 
             List<Map<String, List<String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
             for (Map<String, List<String>> collect : collects) {
                 List<String> fss = collect.get("fs");
                 List<String> incrs = collect.get("incr");
-                if(!CollectionUtils.isEmpty(fss)){
+                if (!CollectionUtils.isEmpty(fss)) {
                     fsList.addAll(fss);
                 }
 
-                if(!CollectionUtils.isEmpty(incrs)){
+                if (!CollectionUtils.isEmpty(incrs)) {
                     incrList.addAll(incrs);
                 }
             }
@@ -80,13 +77,13 @@ public class ShardIndexMergeLoadService {
                 }
             }*/
 
-            Map<String,List<String>> map = new HashMap<>();
-            map.put("fs",fsList);
-            map.put("incr",incrList);
-            log.info("分片查询结束：{}",System.currentTimeMillis()-start);
+            Map<String, List<String>> map = new HashMap<>();
+            map.put("fs", fsList);
+            map.put("incr", incrList);
+            log.info("分片查询结束：{}", System.currentTimeMillis() - start);
             return map;
-        }catch (Exception e){
-            log.error("查询失败：{}",e.getMessage(),e);
+        } catch (Exception e) {
+            log.error("查询失败：{}", e.getMessage(), e);
         }
         return new HashMap<>();
     }

@@ -30,38 +30,54 @@ import java.util.Map;
  */
 @Slf4j
 public class ShardIndexLoadService {
+    //文件索引存储地址
     private String fsPath ;
+    //内存增量索引存储地址
     private String incrPath ;
+    //分片数量
     private int shardNum;
 
+    //文件索引地址
     private Directory fsDirectory;
-
+    //文件索引查询器
     private IndexSearcher fsSearcher;
 
+    //文件索引io
     private IndexReader fsReader;
 
+    //内存映射索引路径
     private Directory incrDirectory;
-
+    //内存映射索引查询器
     private IndexSearcher incrSearcher;
-
+    //内存映射索引io
     private IndexReader incrReader;
 
+    //内存映射索引路径
     private Analyzer ikAnalyzer = new IKAnalyzer(true);
 
     public void setShardNum(int shardNum) {
         this.shardNum = shardNum;
     }
-
+    //地址组成 主路径+分片id+主索引/增量索引名
     public void setFsPath(String fsPath, int shardNum, String fsPathName) {
         this.fsPath = fsPath + "\\"+shardNum + "\\"+fsPathName;
         this.shardNum = shardNum;
     }
 
+    //地址组成 主路径+分片id+主索引/增量索引名
     public void setIncrPath(String incrPath,int shardNum,String incrPathName) {
         this.incrPath = incrPath+ "\\"+shardNum + "\\"+incrPathName;
         this.shardNum = shardNum;
     }
 
+    /**
+     * Description:
+     *  索引修改重新加载更新
+     * @param isInit 是否初始化
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:12
+     */
     public void indexUpdate(boolean isInit){
         if(StringUtils.isBlank(fsPath) || StringUtils.isBlank(incrPath)){
             log.error("索引参数未配置！");
@@ -89,6 +105,15 @@ public class ShardIndexLoadService {
         }
     }
 
+    /**
+     * Description:
+     *  搜索
+     *      主索引和增量索引召回
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:14
+     */
     public Map<String, List<String>> search(String query){
         if(StringUtils.isBlank(fsPath) || StringUtils.isBlank(incrPath)){
             log.error("索引参数未配置！");
@@ -122,6 +147,15 @@ public class ShardIndexLoadService {
         return new HashMap<>();
     }
 
+
+    /**
+     * Description:
+     *  分片数据搜索
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:16
+     */
     private List<String> search(IndexSearcher searcher , String query) throws Exception {
         //降维 布尔or 召回
         QueryParser queryParser = new QueryParser("name", ikAnalyzer);

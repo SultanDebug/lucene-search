@@ -1,23 +1,17 @@
 package com.hzq.researchtest.service.shardindex;
 
 import com.bird.search.utils.AsynUtil;
-import com.hzq.researchtest.config.ShardConfig;
-import com.hzq.researchtest.service.shardindex.shard.ShardIndexLoadService;
+import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.shardindex.shard.ShardIndexService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.tuple.Pair;
-import org.springframework.beans.factory.InitializingBean;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.sql.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
-
-import static com.hzq.researchtest.config.ShardConfig.*;
 
 /**
  * @author Huangzq
@@ -26,52 +20,93 @@ import static com.hzq.researchtest.config.ShardConfig.*;
  */
 @Service
 @Slf4j
-public class ShardIndexMergeService implements InitializingBean {
-    private static Map<Integer, ShardIndexService> SHARD_INDEX_MAP = new HashMap<>();
-    private static ExecutorService executorService = Executors.newFixedThreadPool(ShardConfig.SHARD_NUM);
-    public void indexMerge() {
+public class ShardIndexMergeService extends IndexCommonService {
+    /**
+     * Description:
+     *  索引合并，并发所有分片合并主、增量索引，并通知所有搜索实例更新索引信息
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:33
+     */
+    public void indexMerge(String index) {
+        if (!this.checkIndex(index)) {
+            return;
+        }
         long start = System.currentTimeMillis();
         AtomicLong res = new AtomicLong(0);
 
-        List<AsynUtil.TaskExecute> tasks = SHARD_INDEX_MAP.values().stream()
+        List<AsynUtil.TaskExecute> tasks = SHARD_INDEX_MAP.get(index).values().stream()
                 .map(shardIndexService -> (AsynUtil.TaskExecute) () -> {
-                    res.addAndGet(shardIndexService.indexMerge());
+                    res.addAndGet(shardIndexService.getLeft().indexMerge());
                 }).collect(Collectors.toList());
 
         try {
-            AsynUtil.executeSync(executorService,tasks);
+            AsynUtil.executeSync(executorService, tasks);
         } catch (Exception e) {
-            log.error("数据合并异常：{}",e.getMessage(),e);
+            log.error("数据合并异常：{}", e.getMessage(), e);
         }
-
-        /*for (Map.Entry<Integer, ShardIndexService> entry : SHARD_INDEX_MAP.entrySet()) {
-            Long aLong = entry.getValue().indexMerge();
-            if(aLong!=null){
-                res.addAndGet(aLong);
-            }
-        }*/
-        log.info("合并数量：{},花费：{}",res,System.currentTimeMillis()-start);
+        log.info("合并数量：{},花费：{}", res, System.currentTimeMillis() - start);
     }
-
-    public void addIndex(Long id , String data) {
-        Long shadId = id % SHARD_NUM;
-        ShardIndexService shardIndexService = SHARD_INDEX_MAP.get(shadId.intValue());
-        if(shardIndexService == null){
-            log.error("数据分片异常：{}",shadId);
+    /**
+     * Description:
+     *  索引数据新增
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:35
+     */
+    public void addIndex(String index, Map<String, String> data) {
+        if (!this.checkIndex(index)) {
             return;
         }
-        shardIndexService.addIndex(id,data);
-    }
 
-    public void initIndex() {
+        String idStr = data.get("id");
+
+        if (StringUtils.isBlank(idStr)) {
+            return;
+        }
+        long id = Long.parseLong(idStr);
+
+        Integer shardNum = indexConfig.getIndexMap().get(index).getShardNum();
+        Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
+
+        Long shadId = id % shardNum;
+        ShardIndexService shardIndexService = SHARD_INDEX_MAP.get(index).get(shadId.intValue()).getLeft();
+        if (shardIndexService == null) {
+            log.error("数据分片异常：{}", shadId);
+            return;
+        }
+        shardIndexService.addIndex(fieldMap, idStr, data);
+    }
+    /**
+     * Description:
+     *  索引初始化
+     *      按分片数哈希分布，并发初始化
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:35
+     */
+    public void initIndex(String index) {
+        if (!this.checkIndex(index)) {
+            return;
+        }
+        Integer shardNum = indexConfig.getIndexMap().get(index).getShardNum();
+        Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
+
+        Set<String> fields = fieldMap.values().stream()
+                .filter(o -> o.getDbFieldFlag() == 1)
+                .map(FieldDef::getFieldName)
+                .collect(Collectors.toSet());
         try {
             //获取数据
             Connection con = getCon();
-            List<Pair<Long,String>> res = new ArrayList<>();
+            List<Map<String, String>> res = new ArrayList<>();
             Statement stmt = con.createStatement();
             int size = 10000;
             for (int i = 0; i < 1; i++) {
-                List<Pair<Long,String>> tmps = query(i, stmt, size);
+                List<Map<String, String>> tmps = query(fields, i, stmt, size);
                 if (tmps.size() < size) {
                     break;
                 }
@@ -81,43 +116,52 @@ public class ShardIndexMergeService implements InitializingBean {
             con.close();
 
             //开始初始化
-            Map<Long, List<String>> collect = res.stream().collect(Collectors.groupingBy(o -> o.getLeft() % SHARD_NUM
-                    , Collectors.mapping(Pair::getRight, Collectors.toList())));
+            Map<Long, List<Map<String, String>>> collect = res.stream()
+                    .collect(Collectors.groupingBy(o -> Long.parseLong(o.get("id")) % shardNum
+                            , Collectors.mapping(o1 -> o1, Collectors.toList())));
 
-            List<AsynUtil.TaskExecute> tasks = SHARD_INDEX_MAP.entrySet().stream()
+            List<AsynUtil.TaskExecute> tasks = SHARD_INDEX_MAP.get(index).entrySet().stream()
                     .map(o -> (AsynUtil.TaskExecute) () -> {
-                        List<String> list = collect.get(o.getKey().longValue());
+                        List<Map<String, String>> list = collect.get(o.getKey().longValue());
                         if (CollectionUtils.isEmpty(list)) {
                             return;
                         }
-                        o.getValue().initIndex(list);
+                        o.getValue().getLeft().initIndex(fieldMap, list);
                     }).collect(Collectors.toList());
 
-            AsynUtil.executeSync(executorService,tasks);
+            AsynUtil.executeSync(executorService, tasks);
 
-            /*for (Map.Entry<Integer, ShardIndexService> entry : SHARD_INDEX_MAP.entrySet()) {
-                List<String> list = collect.get(entry.getKey().longValue());
-                if(CollectionUtils.isEmpty(list)){
-                    continue;
-                }
-                entry.getValue().initIndex(list);
-            }*/
-
-        }catch (Exception e){
-            log.error("索引初始化调度失败：{}",e.getMessage(),e);
+        } catch (Exception e) {
+            log.error("索引初始化调度失败：{}", e.getMessage(), e);
         }
     }
 
-
-    private List<Pair<Long,String>> query(int offset, Statement stmt, int size) {
+    /**
+     * Description:
+     *  宽表数据加载
+     *  问题：未作适配
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:36
+     */
+    private List<Map<String, String>> query(Set<String> fields, int offset, Statement stmt, int size) {
+        String fieldStr = StringUtils.join(fields, ",");
         int start = offset * size;
-        String Sql = "select id,name from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide limit " + start + " , " + size;
+        String Sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide limit " + start + " , " + size;
 
-        List<Pair<Long,String>> lists = new ArrayList<>();
+        List<Map<String, String>> lists = new ArrayList<>();
         try {
             ResultSet rs = stmt.executeQuery(Sql);
             while (rs.next()) {
-                lists.add(Pair.of(rs.getLong("id"),rs.getString("name").substring(1)));
+                Map<String, String> map = new HashMap<>();
+                for (String field : fields) {
+                    String val = rs.getString(field);
+                    if (StringUtils.isNotBlank(val)) {
+                        map.put(field, val);
+                    }
+                }
+                lists.add(map);
             }
             rs.close();
         } catch (SQLException e) {
@@ -125,16 +169,23 @@ public class ShardIndexMergeService implements InitializingBean {
         }
         return lists;
     }
-
+    /**
+     * Description:
+     *  宽表数据库连接
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:36
+     */
     private Connection getCon() {
         Connection conn = null;
         String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
+        String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
         try {
             //注册（加载）驱动程序
             Class.forName(driver);
             //获取数据库接
-            conn = DriverManager.getConnection(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
+            conn = DriverManager.getConnection(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -142,20 +193,5 @@ public class ShardIndexMergeService implements InitializingBean {
         return conn;
     }
 
-    @Override
-    public void afterPropertiesSet() throws Exception {
-        for (int i = 0; i < SHARD_NUM; i++) {
-            ShardIndexLoadService loadService = new ShardIndexLoadService();
-            loadService.setShardNum(i);
-            loadService.setFsPath(FS_PATH,i,FS_PATH_NAME);
-            loadService.setIncrPath(INCR_PATH,i,INCR_PATH_NAME);
-            ShardIndexService service = new ShardIndexService();
-            service.setShardNum(i);
-            service.setShardIndexLoadService(loadService);
-            service.setFsPath(FS_PATH,i,FS_PATH_NAME);
-            service.setIncrPath(INCR_PATH,i,INCR_PATH_NAME);
-            SHARD_INDEX_MAP.put(i,service);
-            ShardIndexMergeLoadService.initLoadMap(i,loadService);
-        }
-    }
+
 }

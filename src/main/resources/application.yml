@@ -1,0 +1,35 @@
+configs:
+  indexMap:
+    enterprise:
+      fsPath: C:\Users\zhenqiang.huang\Desktop\searchprocess\pydata\shard_index
+      fsPathName: fsindex
+      incrPath: C:\Users\zhenqiang.huang\Desktop\searchprocess\pydata\shard_index
+      incrPathName: mmapindex
+      shardNum: 10
+      fieldMap:
+        id:
+          fieldName: id
+          analyzerType: 1
+          fieldType: 2
+          stored: 1
+          dbFieldFlag: 1
+        pinyin:
+          fieldName: pinyin
+          analyzerType: 2
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        jianpin:
+          fieldName: jianpin
+          analyzerType: 3
+          fieldType: 2
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        name:
+          fieldName: name
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
