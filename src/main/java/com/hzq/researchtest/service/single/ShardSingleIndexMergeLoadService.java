@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeSet;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -51,13 +52,20 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
 
             List<List<Map<String,String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
 
-            List<Map<String,String>> res = collects.stream().flatMap(Collection::stream)
-                    .sorted((o1,o2)->{
-                        Double d1 = Double.parseDouble(o1.get("score"));
-                        Double d2 = Double.parseDouble(o2.get("score"));
-                        return d2.compareTo(d1);
-                    })
-                    .collect(Collectors.toList());
+            List<Map<String, String>> res = collects.stream()
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.collectingAndThen(
+                            Collectors.toCollection(() -> new TreeSet<>((o1, o2) -> {
+                                Long d1 = Long.parseLong(o1.get("id"));
+                                Long d2 = Long.parseLong(o2.get("id"));
+                                return d1.compareTo(d2);
+                            }))
+                            , v -> v.stream().sorted((o1, o2) -> {
+                                Double d1 = Double.parseDouble(o1.get("score"));
+                                Double d2 = Double.parseDouble(o2.get("score"));
+                                return d2.compareTo(d1);
+                            }).collect(Collectors.toList())
+                    ));
 
             log.info("分片查询结束：{}", System.currentTimeMillis() - start);
             return res.stream().map(JSON::toJSONString).collect(Collectors.toList());
