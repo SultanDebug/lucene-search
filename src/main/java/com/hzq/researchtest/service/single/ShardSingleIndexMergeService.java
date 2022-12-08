@@ -1,8 +1,8 @@
-package com.hzq.researchtest.service.shardindex;
+package com.hzq.researchtest.service.single;
 
 import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
-import com.hzq.researchtest.service.shardindex.shard.ShardIndexService;
+import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -18,12 +18,13 @@ import java.util.stream.Collectors;
  * @description
  * @date 2022/11/30 15:28
  */
-//@Service
+@Service
 @Slf4j
-public class ShardIndexMergeService extends IndexCommonService {
+public class ShardSingleIndexMergeService extends SingleIndexCommonService {
     /**
      * Description:
-     *  索引合并，并发所有分片合并主、增量索引，并通知所有搜索实例更新索引信息
+     * 索引合并，并发所有分片合并主、增量索引，并通知所有搜索实例更新索引信息
+     *
      * @param
      * @return
      * @author Huangzq
@@ -48,9 +49,11 @@ public class ShardIndexMergeService extends IndexCommonService {
         }
         log.info("合并数量：{},花费：{}", res, System.currentTimeMillis() - start);
     }
+
     /**
      * Description:
-     *  索引数据新增
+     * 索引数据新增
+     *
      * @param
      * @return
      * @author Huangzq
@@ -72,17 +75,19 @@ public class ShardIndexMergeService extends IndexCommonService {
         Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
 
         Long shadId = id % shardNum;
-        ShardIndexService shardIndexService = SHARD_INDEX_MAP.get(index).get(shadId.intValue()).getLeft();
+        ShardSingleIndexService shardIndexService = SHARD_INDEX_MAP.get(index).get(shadId.intValue()).getLeft();
         if (shardIndexService == null) {
             log.error("数据分片异常：{}", shadId);
             return;
         }
         shardIndexService.addIndex(fieldMap, idStr, data);
     }
+
     /**
      * Description:
-     *  索引初始化
-     *      按分片数哈希分布，并发初始化
+     * 索引初始化
+     * 按分片数哈希分布，并发初始化
+     *
      * @param
      * @return
      * @author Huangzq
@@ -136,10 +141,12 @@ public class ShardIndexMergeService extends IndexCommonService {
         }
     }
 
+
     /**
      * Description:
-     *  宽表数据加载
-     *  问题：未作适配
+     * 宽表数据加载
+     * 问题：未作适配
+     *
      * @param
      * @return
      * @author Huangzq
@@ -169,9 +176,11 @@ public class ShardIndexMergeService extends IndexCommonService {
         }
         return lists;
     }
+
     /**
      * Description:
-     *  宽表数据库连接
+     * 宽表数据库连接
+     *
      * @param
      * @return
      * @author Huangzq

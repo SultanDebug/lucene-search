@@ -89,19 +89,17 @@ public class IndexCreateService {
         long maxCompletedSequenceNumber = indexWriter.getMaxCompletedSequenceNumber();
         log.info("序列号：{}",maxCompletedSequenceNumber);
         indexWriter.addDocument(doc);
-        indexWriter.flush();
         indexWriter.commit();
+        indexWriter.flush();
+//        indexWriter.flush();
         log.info("索引构建结束：{}", System.currentTimeMillis() - start);
     }
 
     public void initIndex() throws Exception {
         // 每次运行demo先清空索引目录中的索引文件
-        File file = new File("C:\\Users\\zhenqiang.huang\\Desktop\\searchprocess\\pydata\\myindex");
-        if(file.listFiles() != null){
-            for (File listFile : file.listFiles()) {
-                listFile.delete();
-            }
-        }
+        indexWriter.deleteAll();
+        indexWriter.commit();
+        indexWriter.flush();
 
 
         // 索引阶段结束
@@ -135,8 +133,8 @@ public class IndexCreateService {
                 sysTime = System.currentTimeMillis();
             }
         }
-        indexWriter.flush();
         indexWriter.commit();
+        indexWriter.flush();
         log.info("索引构建结束：{}", System.currentTimeMillis() - start);
     }
 
@@ -160,12 +158,12 @@ public class IndexCreateService {
     private Connection getCon() {
         Connection conn = null;
         String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
+        String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
         try {
             //注册（加载）驱动程序
             Class.forName(driver);
             //获取数据库接
-            conn = DriverManager.getConnection(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
+            conn = DriverManager.getConnection(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
         } catch (Exception e) {
             e.printStackTrace();
         }

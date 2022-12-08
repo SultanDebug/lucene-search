@@ -35,11 +35,11 @@ import java.util.Map;
 @Slf4j
 @Scope
 public class TestShardController {
-    @Autowired
+    //@Autowired
     private ShardIndexMergeLoadService shardIndexMergeLoadService;
 
 
-    @Autowired
+    //@Autowired
     private ShardIndexMergeService shardIndexMergeService;
 
     @GetMapping(value = "/shard/query")

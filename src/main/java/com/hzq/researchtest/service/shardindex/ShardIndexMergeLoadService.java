@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
  * @description
  * @date 2022/11/30 17:18
  */
-@Service
+//@Service
 @Slf4j
 public class ShardIndexMergeLoadService extends IndexCommonService {
     /**

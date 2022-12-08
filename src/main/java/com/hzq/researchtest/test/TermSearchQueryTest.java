@@ -106,13 +106,13 @@ public class TermSearchQueryTest {
     public Connection getCon() {
         Connection conn = null;
         String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
+        String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
         try {
             //注册（加载）驱动程序
             Class.forName(driver);
             try {
                 //获取数据库接
-                conn = DriverManager.getConnection(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
+                conn = DriverManager.getConnection(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
             } catch (SQLException e) {
                 System.out.println("getConnection:连接数据库失败");
                 e.printStackTrace();
