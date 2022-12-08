@@ -41,9 +41,9 @@ public class TestShardSingleIndexController {
     private ShardSingleIndexMergeService shardIndexMergeService;
 
     @GetMapping(value = "/shard/single/query")
-    public ResultResponse<List<String>> query(@RequestParam("index") String index, @RequestParam("query") String query) {
+    public ResultResponse<Map<String,Object>> query(@RequestParam("index") String index, @RequestParam("query") String query) {
 
-        List<String> name = shardIndexMergeLoadService.search(index, query);
+        Map<String,Object> name = shardIndexMergeLoadService.search(index, query);
         return ResultResponse.success(name);
     }
 

@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 分片数据查询
@@ -94,7 +95,7 @@ public class ShardSingleIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String,String>> search(Map<String, FieldDef> fieldMap, String query) {
+    public List<Map<String,String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -108,7 +109,7 @@ public class ShardSingleIndexLoadService {
 
             Map<String, List<String>> map = new HashMap<>();
 
-            List<Map<String,String>> fsList = this.search(fsSearcher,fieldMap, query);
+            List<Map<String,String>> fsList = this.search(fsSearcher,fieldMap, query,totle);
 
             return fsList;
         } catch (Exception e) {
@@ -126,10 +127,12 @@ public class ShardSingleIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:16
      */
-    private List<Map<String,String>> search(IndexSearcher searcher,Map<String, FieldDef> fieldMap, String query) throws Exception {
+    private List<Map<String,String>> search(IndexSearcher searcher,Map<String, FieldDef> fieldMap, String query,AtomicLong totle) throws Exception {
         //降维 布尔or 召回
         QueryParser queryParser = new QueryParser("name", ikAnalyzer);
         Query parse = queryParser.parse("name:" + query);
+
+        Query prefixQuery = new PrefixQuery(new Term("name",query));
 
         //原词分词召回
         PhraseQuery tmpQuery = this.phraseQuery("name", query);
@@ -156,12 +159,37 @@ public class ShardSingleIndexLoadService {
             Document doc = searcher.doc(scoreDoc.doc);
             list.add("【布尔】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }*/
+        List<Map<String,String>> list = new ArrayList<>();
 
         long start = System.nanoTime();
-        ScoreDoc[] scoreDocs = searcher.search(tmpQuery, resultTopN).scoreDocs;
+
+        long start4 = System.nanoTime();
+        TopDocs prefixDocs = searcher.search(prefixQuery, resultTopN);
+        totle.addAndGet(prefixDocs.totalHits);
+        ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
+        long end4 = System.nanoTime();
+        //log.info("分片【"+shardNum+"】【原词或召回】召回花费：{}", end3 - start3);
+        for (int i = 0; i < scoreDocs4.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs4[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            Map<String,String> map = new HashMap<>();
+            map.put("score",String.valueOf(scoreDoc.score));
+            map.put("shard",String.valueOf(shardNum));
+            map.put("type","前缀");
+            fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
+                    o->{
+                        map.put(o.getFieldName(),doc.get(o.getFieldName()));
+                    }
+            );
+            list.add(map);
+        }
+
+        TopDocs nameDocs = searcher.search(tmpQuery, resultTopN);
+        totle.addAndGet(nameDocs.totalHits);
+        ScoreDoc[] scoreDocs = nameDocs.scoreDocs;
         long end = System.nanoTime();
         //log.info("分片【"+shardNum+"】【名称】召回花费：{}", end - start);
-        List<Map<String,String>> list = new ArrayList<>();
         for (int i = 0; i < scoreDocs.length; i++) {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
@@ -169,7 +197,7 @@ public class ShardSingleIndexLoadService {
             Map<String,String> map = new HashMap<>();
             map.put("score",String.valueOf(scoreDoc.score));
             map.put("shard",String.valueOf(shardNum));
-            map.put("type","name");
+            map.put("type","名称");
             fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
                     o->{
                         map.put(o.getFieldName(),doc.get(o.getFieldName()));
@@ -179,7 +207,9 @@ public class ShardSingleIndexLoadService {
         }
 
         long start1 = System.nanoTime();
-        ScoreDoc[] scoreDocs1 = searcher.search(pinyinQuery, resultTopN).scoreDocs;
+        TopDocs pinyinDocs = searcher.search(pinyinQuery, resultTopN);
+        totle.addAndGet(pinyinDocs.totalHits);
+        ScoreDoc[] scoreDocs1 = pinyinDocs.scoreDocs;
         long end1 = System.nanoTime();
         //log.info("分片【"+shardNum+"】【拼音】召回花费：{}", end1 - start1);
         for (int i = 0; i < scoreDocs1.length; i++) {
@@ -199,7 +229,9 @@ public class ShardSingleIndexLoadService {
         }
 
         long start2 = System.nanoTime();
-        ScoreDoc[] scoreDocs2 = searcher.search(jianpinQuery, resultTopN).scoreDocs;
+        TopDocs jianpinDocs = searcher.search(jianpinQuery, resultTopN);
+        totle.addAndGet(jianpinDocs.totalHits);
+        ScoreDoc[] scoreDocs2 = jianpinDocs.scoreDocs;
         long end2 = System.nanoTime();
         //log.info("分片【"+shardNum+"】【简拼】召回花费：{}", end2 - start2);
         for (int i = 0; i < scoreDocs2.length; i++) {
@@ -209,7 +241,7 @@ public class ShardSingleIndexLoadService {
             Map<String,String> map = new HashMap<>();
             map.put("score",String.valueOf(scoreDoc.score));
             map.put("shard",String.valueOf(shardNum));
-            map.put("type","jianpin");
+            map.put("type","简拼");
             fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
                     o->{
                         map.put(o.getFieldName(),doc.get(o.getFieldName()));
@@ -218,7 +250,7 @@ public class ShardSingleIndexLoadService {
             list.add(map);
         }
 
-        long start3 = System.nanoTime();
+        /*long start3 = System.nanoTime();
         ScoreDoc[] scoreDocs3 = searcher.search(parse, resultTopN).scoreDocs;
         long end3 = System.nanoTime();
         //log.info("分片【"+shardNum+"】【原词或召回】召回花费：{}", end3 - start3);
@@ -236,7 +268,7 @@ public class ShardSingleIndexLoadService {
                     }
             );
             list.add(map);
-        }
+        }*/
 
         log.info("分片【" + shardNum + "】召回花费：{}", System.nanoTime() - start);
 
