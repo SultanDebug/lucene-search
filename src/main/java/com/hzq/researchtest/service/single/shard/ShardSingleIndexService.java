@@ -85,7 +85,7 @@ public class ShardSingleIndexService {
         }
 
         // 对于没有指定的分词器的字段，使用标准分词器
-        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new IKAnalyzer(true), fieldAnalyzers);
+        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new IKAnalyzer(false), fieldAnalyzers);
 
         IndexWriterConfig conf = new IndexWriterConfig(analyzer);
         conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
@@ -178,7 +178,7 @@ public class ShardSingleIndexService {
      * @author Huangzq
      * @date 2022/12/6 19:25
      */
-    public void addIndex(Map<String, FieldDef> fieldMap, String id, Map<String, String> data) {
+    public void addIndex(Map<String, FieldDef> fieldMap, String id, Map<String, Object> data) {
         if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
             log.error("索引参数未配置！");
             return;
@@ -228,7 +228,7 @@ public class ShardSingleIndexService {
      * @author Huangzq
      * @date 2022/12/6 19:26
      */
-    public void initIndex(Map<String, FieldDef> fieldMap, List<Map<String, String>> res) {
+    public void initIndex(Map<String, FieldDef> fieldMap, List<Map<String, Object>> res) {
         if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
             log.error("索引参数未配置！");
             return;
@@ -249,7 +249,7 @@ public class ShardSingleIndexService {
             log.info("索引构建开始：{}", start);
             long sysTime = System.currentTimeMillis();
 
-            for (Map<String, String> map : res) {
+            for (Map<String, Object> map : res) {
                 Document document = this.docByConfig(fieldMap, map);
                 mainIndex.addDocument(document);
                 if (id % 10000 == 0) {
@@ -296,7 +296,7 @@ public class ShardSingleIndexService {
             switch (entry.getValue().getAnalyzerType()) {
                 case 1:
                     // 字段使用ik分词器
-                    analyzer = new IKAnalyzer(true);
+                    analyzer = new IKAnalyzer(false);
                     break;
                 case 2:
                     // 拼音字段使用标准分词器
@@ -308,7 +308,7 @@ public class ShardSingleIndexService {
                     break;
                 default:
                     // 默认使用ik分词器
-                    analyzer = new IKAnalyzer(true);
+                    analyzer = new IKAnalyzer(false);
                     break;
             }
             list.add(Pair.of(entry.getKey(), analyzer));
@@ -325,17 +325,17 @@ public class ShardSingleIndexService {
      * @author Huangzq
      * @date 2022/12/6 19:27
      */
-    private Document docByConfig(Map<String, FieldDef> defMap, Map<String, String> valMap) {
+    private Document docByConfig(Map<String, FieldDef> defMap, Map<String, Object> valMap) {
         Document doc = new Document();
         for (Map.Entry<String, FieldDef> entry : defMap.entrySet()) {
-            String val = valMap.get(entry.getKey());
-            if (StringUtils.isBlank(val)) {
+            Object val = valMap.get(entry.getKey());
+            if (Objects.isNull(val)) {
                 //看是否为衍生字段
                 if (entry.getValue().getDbFieldFlag() == 1) {
                     continue;
                 }
-                val = valMap.get(entry.getValue().getParentField());
-                if (StringUtils.isBlank(val)) {
+                val = valMap.get(entry.getValue().getParentField()).toString();
+                if (Objects.isNull(val)) {
                     continue;
                 }
             }
@@ -343,10 +343,10 @@ public class ShardSingleIndexService {
             IndexableField textField = null;
             switch (entry.getValue().getFieldType()) {
                 case 1:
-                    textField = new TextField(entry.getKey(), val, store);
+                    textField = new TextField(entry.getKey(), val.toString(), store);
                     break;
                 case 2:
-                    textField = new StringField(entry.getKey(), val, store);
+                    textField = new StringField(entry.getKey(), val.toString(), store);
                     break;
                 case 3:
                     //todo 未支持

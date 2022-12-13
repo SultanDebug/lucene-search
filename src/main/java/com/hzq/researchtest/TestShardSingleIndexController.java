@@ -96,7 +96,7 @@ public class TestShardSingleIndexController {
     }
 
     @PostMapping(value = "/shard/single/add/{index}")
-    public ResultResponse<String> add(@PathVariable("index") String index, @RequestBody Map<String, String> data) {
+    public ResultResponse<String> add(@PathVariable("index") String index, @RequestBody Map<String, Object> data) {
         shardIndexMergeService.addIndex(index, data);
         return ResultResponse.success();
     }

@@ -21,7 +21,7 @@ public class MyIkAnalyzer {
         IKAnalyzer ikAnalyzer = new IKAnalyzer(true);
 
 
-        String arr[] = {"我是中国人的大爷", "同义词数量爆棚"};
+        String arr[] = {"维正知识", "同义词数量爆棚"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(arr[i]));
