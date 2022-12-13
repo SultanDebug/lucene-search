@@ -1,13 +1,21 @@
 package com.hzq.researchtest;
 
 import com.bird.search.common.ResultResponse;
+import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.researchtest.service.single.ShardSingleIndexMergeLoadService;
 import com.hzq.researchtest.service.single.ShardSingleIndexMergeService;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.web.bind.annotation.*;
+import org.wltea.analyzer.lucene.IKAnalyzer;
 
+import java.io.StringReader;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +47,39 @@ public class TestShardSingleIndexController {
 
     @Autowired
     private ShardSingleIndexMergeService shardIndexMergeService;
+
+    @GetMapping(value = "/shard/single/py-analyzer")
+    public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart,@RequestParam("query") String query) throws Exception {
+        MyOnlyPinyinAnalyzer ikAnalyzer = new MyOnlyPinyinAnalyzer(smart);
+        TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
+        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
+        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
+        tokenStream.reset();//必须
+        List<String> res = new ArrayList<>();
+        while (tokenStream.incrementToken()) {
+            res.add(termAtt.toString() + ":" + offsetAttribute.startOffset() + "/" + offsetAttribute.endOffset() + "==>" + positionIncrementAttribute.getPositionIncrement());
+        }
+        tokenStream.close();//必须
+        ikAnalyzer.close();
+        return ResultResponse.success(res);
+    }
+    @GetMapping(value = "/shard/single/ik-analyzer")
+    public ResultResponse<List<String>> ikAnalyzer(@RequestParam("smart") Boolean smart,@RequestParam("query") String query) throws Exception {
+        IKAnalyzer ikAnalyzer = new IKAnalyzer(smart);
+        TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
+        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
+        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
+        tokenStream.reset();//必须
+        List<String> res = new ArrayList<>();
+        while (tokenStream.incrementToken()) {
+            res.add(termAtt.toString() + ":" + offsetAttribute.startOffset() + "/" + offsetAttribute.endOffset() + "==>" + positionIncrementAttribute.getPositionIncrement());
+        }
+        tokenStream.close();//必须
+        ikAnalyzer.close();
+        return ResultResponse.success(res);
+    }
 
     @GetMapping(value = "/shard/single/query")
     public ResultResponse<Map<String,Object>> query(@RequestParam("index") String index, @RequestParam("query") String query) {

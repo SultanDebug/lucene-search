@@ -3,9 +3,12 @@ package com.hzq.researchtest.service.single.shard;
 import com.hzq.researchtest.config.FieldDef;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
+import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
+import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -135,7 +138,8 @@ public class ShardSingleIndexLoadService {
         Query prefixQuery = new PrefixQuery(new Term("name",query));
 
         //原词分词召回
-        PhraseQuery tmpQuery = this.phraseQuery("name", query);
+//        PhraseQuery tmpQuery = this.phraseQuery("name", query);
+        BooleanQuery tmpQuery = this.termsQuery("name", query);
 
         //原词拼音分词召回
         PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
@@ -313,26 +317,53 @@ public class ShardSingleIndexLoadService {
         return builder.build();
     }
 
-    private PhraseQuery phraseQuery(String fieldId, String query) throws IOException {
+    private BooleanQuery termsQuery(String fieldId, String query) throws IOException {
         TokenStream tokenStream = ikAnalyzer.tokenStream(fieldId, query);
         CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
+        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
         tokenStream.reset();//必须
-        List<String> terms = new ArrayList<>();
+        List<Pair<String,Integer>> terms = new ArrayList<>();
         while (tokenStream.incrementToken()) {
-            terms.add(termAtt.toString());
+            terms.add(Pair.of(termAtt.toString(),offsetAttribute.startOffset()));
         }
         tokenStream.close();//必须
         String[] param = new String[terms.size()];
         for (int i = 0; i < terms.size(); i++) {
-            param[i] = terms.get(i);
+            param[i] = terms.get(i).getLeft();
+        }
+
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        for (Pair<String,Integer> term : terms) {
+            TermQuery termQuery = new TermQuery(new Term(fieldId,term.getLeft()));
+            builder.add(termQuery, BooleanClause.Occur.MUST);
+        }
+
+        return builder.build();
+    }
+
+    private PhraseQuery phraseQuery(String fieldId, String query) throws IOException {
+        TokenStream tokenStream = ikAnalyzer.tokenStream(fieldId, query);
+        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
+        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
+        tokenStream.reset();//必须
+        List<Pair<String,Integer>> terms = new ArrayList<>();
+        while (tokenStream.incrementToken()) {
+            terms.add(Pair.of(termAtt.toString(),offsetAttribute.startOffset()));
+        }
+        tokenStream.close();//必须
+        String[] param = new String[terms.size()];
+        for (int i = 0; i < terms.size(); i++) {
+            param[i] = terms.get(i).getLeft();
         }
 
         PhraseQuery.Builder builder = new PhraseQuery.Builder();
-        for (String term : terms) {
-            builder.add(new Term(fieldId, term));
+        for (Pair<String,Integer> term : terms) {
+            builder.add(new Term(fieldId, term.getLeft()),term.getRight());
         }
 
-        builder.setSlop(3);
+        builder.setSlop(0);
 
         return builder.build();
     }

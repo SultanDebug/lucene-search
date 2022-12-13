@@ -61,7 +61,7 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         term = termAtt.toString();
         if (StringUtils.isNotEmpty(prefix) && term.length() >= minTermLength) {
             while (true) {
-                if(StringUtils.isEmpty(prefix)){
+                if (StringUtils.isEmpty(prefix)) {
                     return false;
                 }
                 char c = prefix.charAt(0);
@@ -72,14 +72,16 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
                 }
                 termAtt.setEmpty();
                 termAtt.append(pinyinTerm);
-                posIncrAtt.setPositionIncrement(0);
+                posIncrAtt.setPositionIncrement(1);
                 return true;
             }
         }
         if (input.incrementToken()) {
             skippedPositions = 0;
-            prefix = termAtt.toString();
             term = termAtt.toString();
+            if (term.length() > 1) {
+                prefix = term;
+            }
             if (term.length() >= minTermLength) {
                 String pinyinTerm = PinyinUtil.termToPinyin(term);
                 termAtt.copyBuffer(pinyinTerm.toCharArray(), 0, pinyinTerm.length());
