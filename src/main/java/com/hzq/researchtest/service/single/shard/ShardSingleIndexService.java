@@ -18,6 +18,7 @@ import org.apache.lucene.index.IndexableField;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.springframework.util.CollectionUtils;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.nio.file.Paths;
@@ -246,37 +247,120 @@ public class ShardSingleIndexService {
             mainIndex.commit();
 
             long start = System.currentTimeMillis();
-            log.info("索引构建开始：{}", start);
-            long sysTime = System.currentTimeMillis();
 
             for (Map<String, Object> map : res) {
                 Document document = this.docByConfig(fieldMap, map);
                 mainIndex.addDocument(document);
-                if (id % 10000 == 0) {
-                    log.info("加载进度：{}，花费：{}", id, System.currentTimeMillis() - sysTime);
-                    sysTime = System.currentTimeMillis();
-                }
             }
+            log.info("分片：{}，加载进度：{}，花费：{}", shardNum,res.get(res.size()-1).get("id"), System.currentTimeMillis() - start);
 
             mainIndex.flush();
             mainIndex.commit();
 
             shardIndexLoadService.indexUpdate();
 
-            log.info("索引构建结束：{}", System.currentTimeMillis() - start);
+            log.info("分片：{}，加载进度：{}，索引构建结束：{}",shardNum,res.get(res.size()-1).get("id"), System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.error("索引初始化失败：{}", e.getMessage(), e);
         } finally {
             try {
-                //fsDirectory.close();
                 if (mainIndex != null) {
                     mainIndex.close();
+                }
+                if(fsDirectory !=null){
+                    fsDirectory.close();
                 }
             } catch (Exception e) {
                 log.error("初始化索引关闭失败：{}", e.getMessage(), e);
             }
 
         }
+    }
+
+    /**
+     * 仅限初始化使用
+     * */
+    private IndexWriter mainIndex = null;
+    private Directory fsDirectory = null;
+
+    /**
+     * Description:
+     *  初始化前索引数据删除
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/14 17:55
+     */
+    public void deleteAll(){
+        if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
+            log.error("索引参数未配置！");
+            return;
+        }
+        try {
+            IndexWriterConfig conf = this.getConfig(fieldConfigs);
+            fsDirectory = FSDirectory.open(Paths.get(fsPath));
+            mainIndex = new IndexWriter(fsDirectory, conf);
+            // 每次运行demo先清空索引目录中的索引文件
+            mainIndex.deleteAll();
+            mainIndex.flush();
+            mainIndex.commit();
+        } catch (Exception e) {
+            log.error("索引删除失败：{}", e.getMessage(), e);
+        }
+    }
+
+
+    /**
+     * Description:
+     *  索引文档添加
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/14 17:55
+     */
+    public void commitAll(Map<String, FieldDef> fieldMap, List<Map<String, Object>> res){
+        if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
+            log.error("索引参数未配置！");
+            return;
+        }
+        if(CollectionUtils.isEmpty(res)){
+            log.info("索引数据为空{}",shardNum);
+            return;
+        }
+        try {
+            long start = System.currentTimeMillis();
+            for (Map<String, Object> map : res) {
+                Document document = this.docByConfig(fieldMap, map);
+                mainIndex.addDocument(document);
+            }
+            log.info("分片：{}，加载进度：{}，索引构建结束：{}", shardNum,res.size(), System.currentTimeMillis() - start);
+        } catch (Exception e) {
+            log.error("索引初始化失败：{}", e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Description:
+     *  初始化后数据提交及搜索端通知
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/14 17:54
+     */
+    public void noticeSearcher(){
+        try {
+            mainIndex.flush();
+            mainIndex.commit();
+            if (mainIndex != null) {
+                mainIndex.close();
+            }
+            if (fsDirectory != null) {
+                fsDirectory.close();
+            }
+        } catch (Exception e) {
+            log.error("索引删除关闭失败：{}", e.getMessage(), e);
+        }
+        shardIndexLoadService.indexUpdate();
     }
 
     /**
