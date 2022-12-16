@@ -15,7 +15,7 @@ configs:
           dbFieldFlag: 1
         pinyin:
           fieldName: pinyin
-          analyzerType: 2
+          analyzerType: 4
           fieldType: 1
           stored: 0
           dbFieldFlag: 0
@@ -23,7 +23,7 @@ configs:
         jianpin:
           fieldName: jianpin
           analyzerType: 3
-          fieldType: 2
+          fieldType: 1
           stored: 0
           dbFieldFlag: 0
           parentField: name
@@ -31,5 +31,53 @@ configs:
           fieldName: name
           analyzerType: 1
           fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        used_name:
+          fieldName: used_name
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        product_brand_names:
+          fieldName: product_brand_names
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        brand_names_algo:
+          fieldName: brand_names_algo
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        app_name:
+          fieldName: app_name
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        stock_name_short_array:
+          fieldName: stock_name_short_array
+          analyzerType: 1
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        company_id:
+          fieldName: company_id
+          analyzerType: 1
+          fieldType: 2
+          stored: 1
+          dbFieldFlag: 1
+        stock_code_new_array:
+          fieldName: stock_code_new_array
+          analyzerType: 1
+          fieldType: 2
+          stored: 1
+          dbFieldFlag: 1
+        credit_no:
+          fieldName: credit_no
+          analyzerType: 1
+          fieldType: 2
           stored: 1
           dbFieldFlag: 1

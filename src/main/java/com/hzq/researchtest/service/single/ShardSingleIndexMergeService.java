@@ -201,9 +201,8 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 entry.getValue().getLeft().deleteAll();
             }
 
-            int pageSize = 10000;
+            int pageSize = 1000000;
             long maxId = 0;
-            int i = 0;
             while (true){
                 List<Map<String, Object>> tmps = queryForPage(errorSqls,jdbcTemplate,fields, maxId, pageSize);
                 if(CollectionUtils.isEmpty(tmps)){continue;}
@@ -229,9 +228,8 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                     break;
                 }
                 System.gc();
-                log.info("数据加载进度：{}", maxId);
-                i++;
-                if(i>=2){break;}
+                log.info("总数据加载进度：{}", maxId);
+                if(maxId >= pageSize){break;}
             }
 
 
@@ -240,7 +238,7 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
             }
 
 
-            log.info("失败sql：{}", JSON.toJSONString(errorSqls));
+            log.error("失败sql：{}", JSON.toJSONString(errorSqls));
 
             return errorSqls;
 
@@ -286,7 +284,7 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     private List<Map<String, Object>> queryForPage(List<String> errorSqls,JdbcTemplate jdbcTemplate,Set<String> fields, long maxId , int pageSize){
         List<Map<String, Object>> res = new ArrayList<>();
-        int size = 10000;
+        int size = 100000;
         long sum = 0;
         while (true){
             List<Map<String, Object>> tmps = query(errorSqls,jdbcTemplate,fields, maxId, size);
@@ -308,16 +306,14 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     /**
      * Description:
-     * 宽表数据加载
-     * 问题：未作适配
-     *
+     *  多线程加载
      * @param
      * @return
      * @author Huangzq
-     * @date 2022/12/6 19:36
+     * @date 2022/12/14 14:57
      */
-    private List<Map<String,Object>> call(Set<String> fields, JdbcTemplate jdbcTemplate, int cnt , long size){
-        long pageSize = 10000;
+    private List<Map<String,Object>> call(List<String> errorSqls,Set<String> fields, JdbcTemplate jdbcTemplate, int cnt , long size){
+        long pageSize = 10000000;
         long min = cnt*pageSize;
         long max = min + pageSize;
 
@@ -332,11 +328,21 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
             if(tmpMax>=max){
                 long finalTmpMin = tmpMin;
                 AsynUtil.TaskExecute task = () -> {
-                    log.info("数据页进度开始：{}，{}", finalTmpMin,max);
-                    List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin, max);
-                    log.info("数据页进度结束：{}，{}，{}",finalTmpMin, max,query.size());
-                    res.addAll(query);
-
+                    try {
+                        log.info("数据页进度开始：{}，{}", finalTmpMin,max);
+                        List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin, max);
+                        log.info("数据页进度结束：{}，{}，{}",finalTmpMin, max,query.size());
+                        res.addAll(query);
+                    }catch (Exception e){
+                        try {
+                            log.info("异常补偿开始：{}，{}", finalTmpMin,max);
+                            List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin, max);
+                            log.info("异常补偿结束：{}，{}，{}",finalTmpMin, max,query.size());
+                            res.addAll(query);
+                        }catch (Exception e1){
+                            errorSqls.add(finalTmpMin+"/"+max);
+                        }
+                    }
                 };
                 tasks.add(task);
                 break;
@@ -344,10 +350,22 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
             long finalTmpMin1 = tmpMin;
             long finalTmpMax = tmpMax;
             AsynUtil.TaskExecute task = () -> {
-                log.info("数据页进度开始：{}，{}", finalTmpMin1, finalTmpMax);
-                List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin1, finalTmpMax);
-                log.info("数据页进度结束：{}，{}，{}",finalTmpMin1, finalTmpMax,query.size());
-                res.addAll(query);
+                try {
+                    log.info("数据页进度开始：{}，{}", finalTmpMin1, finalTmpMax);
+                    List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin1, finalTmpMax);
+                    log.info("数据页进度结束：{}，{}，{}",finalTmpMin1, finalTmpMax,query.size());
+                    res.addAll(query);
+                }catch (Exception e){
+                    try {
+                        log.info("异常补偿开始：{}，{}", finalTmpMin1, finalTmpMax);
+                        List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin1, finalTmpMax);
+                        log.info("异常补偿结束：{}，{}，{}",finalTmpMin1, finalTmpMax,query.size());
+                        res.addAll(query);
+                    }catch (Exception e1){
+                        errorSqls.add(finalTmpMin1+"/"+finalTmpMax);
+                    }
+
+                }
             };
             tasks.add(task);
 
@@ -372,12 +390,11 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     /**
      * Description:
-     * 宽表数据库连接
-     *
+     *  宽表数据库连接
      * @param
      * @return
      * @author Huangzq
-     * @date 2022/12/6 19:36
+     * @date 2022/12/14 14:56
      */
     public static JdbcTemplate createJdbcTemplate(String url, String username, String password) {
         DruidDataSource dataSource = new DruidDataSource();
@@ -388,6 +405,4 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
         dataSource.setConnectTimeout(-1);
         return new JdbcTemplate(dataSource);
     }
-
-
 }

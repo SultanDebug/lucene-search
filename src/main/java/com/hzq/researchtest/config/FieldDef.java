@@ -11,7 +11,7 @@ import lombok.Data;
 public class FieldDef {
     //字段名称
     private String fieldName;
-    //1-ik分词  2-拼音分词 3-简拼分词
+    //1-ik分词  2-拼音分词 3-简拼分词 4-全拼
     private int analyzerType;
     //1-分词字段  2-不分词 3-范围字段
     private int fieldType;

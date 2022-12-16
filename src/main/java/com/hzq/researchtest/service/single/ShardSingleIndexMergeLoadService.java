@@ -51,15 +51,6 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
 
             List<List<Map<String,String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
 
-            /*List<Map<String,String>> res = collects.stream()
-                    .flatMap(Collection::stream)
-                    .sorted((o1,o2)->{
-                        Double d1 = Double.parseDouble(o1.get("score"));
-                        Double d2 = Double.parseDouble(o2.get("score"));
-                        return d2.compareTo(d1);
-                    })
-                    .collect(Collectors.toList());*/
-
             List<Map<String, String>> res = collects.stream()
                     .flatMap(Collection::stream)
                     .collect(Collectors.collectingAndThen(
@@ -77,11 +68,10 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
 
             long time = System.currentTimeMillis() - start;
             log.info("分片查询结束：{}", time);
-            List<String> data = res.stream().map(JSON::toJSONString).collect(Collectors.toList());
             Map<String,Object> map = new HashMap<>();
             map.put("totle",totle);
             map.put("took",time);
-            map.put("data",data);
+            map.put("data",res);
             return map;
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);

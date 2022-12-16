@@ -1,5 +1,6 @@
 package com.hzq.researchtest.service.single.shard;
 
+import com.hzq.researchtest.analyzer.MyAllPinyinAnalyzer;
 import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.researchtest.config.FieldDef;
@@ -43,9 +44,6 @@ public class ShardSingleIndexService {
     private int shardNum;
     //文件系统索引
     private String fsPath;
-
-    //数据id、自增
-    private Long id = 0L;
 
     //字段根据配置生成分词信息
     private List<Pair<String, Analyzer>> fieldConfigs;
@@ -252,23 +250,21 @@ public class ShardSingleIndexService {
                 Document document = this.docByConfig(fieldMap, map);
                 mainIndex.addDocument(document);
             }
-            log.info("分片：{}，加载进度：{}，花费：{}", shardNum,res.get(res.size()-1).get("id"), System.currentTimeMillis() - start);
+            log.info("分片：{}，加载进度：{}，花费：{}", shardNum, res.get(res.size() - 1).get("id"), System.currentTimeMillis() - start);
 
             mainIndex.flush();
             mainIndex.commit();
 
             shardIndexLoadService.indexUpdate();
 
-            log.info("分片：{}，加载进度：{}，索引构建结束：{}",shardNum,res.get(res.size()-1).get("id"), System.currentTimeMillis() - start);
+            log.info("分片：{}，加载进度：{}，索引构建结束：{}", shardNum, res.get(res.size() - 1).get("id"), System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.error("索引初始化失败：{}", e.getMessage(), e);
         } finally {
             try {
+                //fsDirectory.close();
                 if (mainIndex != null) {
                     mainIndex.close();
-                }
-                if(fsDirectory !=null){
-                    fsDirectory.close();
                 }
             } catch (Exception e) {
                 log.error("初始化索引关闭失败：{}", e.getMessage(), e);
@@ -279,19 +275,20 @@ public class ShardSingleIndexService {
 
     /**
      * 仅限初始化使用
-     * */
+     */
     private IndexWriter mainIndex = null;
     private Directory fsDirectory = null;
 
     /**
      * Description:
-     *  初始化前索引数据删除
+     * 初始化前索引数据删除
+     *
      * @param
      * @return
      * @author Huangzq
      * @date 2022/12/14 17:55
      */
-    public void deleteAll(){
+    public void deleteAll() {
         if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
             log.error("索引参数未配置！");
             return;
@@ -312,19 +309,20 @@ public class ShardSingleIndexService {
 
     /**
      * Description:
-     *  索引文档添加
+     * 索引文档添加
+     *
      * @param
      * @return
      * @author Huangzq
      * @date 2022/12/14 17:55
      */
-    public void commitAll(Map<String, FieldDef> fieldMap, List<Map<String, Object>> res){
+    public void commitAll(Map<String, FieldDef> fieldMap, List<Map<String, Object>> res) {
         if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
             log.error("索引参数未配置！");
             return;
         }
-        if(CollectionUtils.isEmpty(res)){
-            log.info("索引数据为空{}",shardNum);
+        if (CollectionUtils.isEmpty(res)) {
+            log.info("索引数据为空{}", shardNum);
             return;
         }
         try {
@@ -333,7 +331,7 @@ public class ShardSingleIndexService {
                 Document document = this.docByConfig(fieldMap, map);
                 mainIndex.addDocument(document);
             }
-            log.info("分片：{}，加载进度：{}，索引构建结束：{}", shardNum,res.size(), System.currentTimeMillis() - start);
+            log.info("分片：{}，加载进度：{}，索引构建结束：{}", shardNum, res.size(), System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.error("索引初始化失败：{}", e.getMessage(), e);
         }
@@ -341,13 +339,14 @@ public class ShardSingleIndexService {
 
     /**
      * Description:
-     *  初始化后数据提交及搜索端通知
+     * 初始化后数据提交及搜索端通知
+     *
      * @param
      * @return
      * @author Huangzq
      * @date 2022/12/14 17:54
      */
-    public void noticeSearcher(){
+    public void noticeSearcher() {
         try {
             mainIndex.flush();
             mainIndex.commit();
@@ -389,6 +388,10 @@ public class ShardSingleIndexService {
                 case 3:
                     // 简拼字段使用标准分词器
                     analyzer = new MyJianpinAnalyzer();
+                    break;
+                case 4:
+                    // 简拼字段使用标准分词器
+                    analyzer = new MyAllPinyinAnalyzer();
                     break;
                 default:
                     // 默认使用ik分词器

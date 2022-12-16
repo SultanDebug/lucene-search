@@ -1,6 +1,7 @@
 package com.hzq.researchtest.service.single.shard;
 
 import com.hzq.researchtest.config.FieldDef;
+import com.hzq.researchtest.service.single.shard.query.QueryBuild;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -98,7 +99,7 @@ public class ShardSingleIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String,String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle) {
+    public List<Map<String, String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -110,9 +111,7 @@ public class ShardSingleIndexLoadService {
                 fsSearcher = new IndexSearcher(fsReader);
             }
 
-            Map<String, List<String>> map = new HashMap<>();
-
-            List<Map<String,String>> fsList = this.search(fsSearcher,fieldMap, query,totle);
+            List<Map<String, String>> fsList = this.sugSearch(fsSearcher, fieldMap, query, totle);
 
             return fsList;
         } catch (Exception e) {
@@ -130,12 +129,12 @@ public class ShardSingleIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:16
      */
-    private List<Map<String,String>> search(IndexSearcher searcher,Map<String, FieldDef> fieldMap, String query,AtomicLong totle) throws Exception {
+    private List<Map<String, String>> search(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
         //降维 布尔or 召回
         QueryParser queryParser = new QueryParser("name", ikAnalyzer);
         Query parse = queryParser.parse("name:" + query);
 
-        Query prefixQuery = new PrefixQuery(new Term("name",query));
+        Query prefixQuery = new PrefixQuery(new Term("name", query));
 
         //原词分词召回
 //        PhraseQuery tmpQuery = this.phraseQuery("name", query);
@@ -147,7 +146,7 @@ public class ShardSingleIndexLoadService {
         //简拼全词召回
         TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);
 
-        BooleanQuery booleanQuery = this.seggestQuery(query);
+        Query booleanQuery = QueryBuild.sugQuery(query);
 
         // 返回Top5的结果
         int resultTopN = 5;
@@ -163,7 +162,7 @@ public class ShardSingleIndexLoadService {
             Document doc = searcher.doc(scoreDoc.doc);
             list.add("【布尔】命中==>" + doc.get("id") + "==>" + doc.get("name")+ "==>" + scoreDoc.score);
         }*/
-        List<Map<String,String>> list = new ArrayList<>();
+        List<Map<String, String>> list = new ArrayList<>();
 
         long start = System.nanoTime();
 
@@ -177,13 +176,13 @@ public class ShardSingleIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs4[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            Map<String,String> map = new HashMap<>();
-            map.put("score",String.valueOf(scoreDoc.score));
-            map.put("shard",String.valueOf(shardNum));
-            map.put("type","前缀");
-            fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
-                    o->{
-                        map.put(o.getFieldName(),doc.get(o.getFieldName()));
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("type", "前缀");
+            fieldMap.values().stream().filter(o -> o.getDbFieldFlag() == 1).forEach(
+                    o -> {
+                        map.put(o.getFieldName(), doc.get(o.getFieldName()));
                     }
             );
             list.add(map);
@@ -198,13 +197,13 @@ public class ShardSingleIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            Map<String,String> map = new HashMap<>();
-            map.put("score",String.valueOf(scoreDoc.score));
-            map.put("shard",String.valueOf(shardNum));
-            map.put("type","名称");
-            fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
-                    o->{
-                        map.put(o.getFieldName(),doc.get(o.getFieldName()));
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("type", "名称");
+            fieldMap.values().stream().filter(o -> o.getDbFieldFlag() == 1).forEach(
+                    o -> {
+                        map.put(o.getFieldName(), doc.get(o.getFieldName()));
                     }
             );
             list.add(map);
@@ -220,13 +219,13 @@ public class ShardSingleIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs1[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            Map<String,String> map = new HashMap<>();
-            map.put("score",String.valueOf(scoreDoc.score));
-            map.put("shard",String.valueOf(shardNum));
-            map.put("type","拼音");
-            fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
-                    o->{
-                        map.put(o.getFieldName(),doc.get(o.getFieldName()));
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("type", "拼音");
+            fieldMap.values().stream().filter(o -> o.getDbFieldFlag() == 1).forEach(
+                    o -> {
+                        map.put(o.getFieldName(), doc.get(o.getFieldName()));
                     }
             );
             list.add(map);
@@ -242,13 +241,13 @@ public class ShardSingleIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs2[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            Map<String,String> map = new HashMap<>();
-            map.put("score",String.valueOf(scoreDoc.score));
-            map.put("shard",String.valueOf(shardNum));
-            map.put("type","简拼");
-            fieldMap.values().stream().filter(o->o.getDbFieldFlag()==1).forEach(
-                    o->{
-                        map.put(o.getFieldName(),doc.get(o.getFieldName()));
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("type", "简拼");
+            fieldMap.values().stream().filter(o -> o.getDbFieldFlag() == 1).forEach(
+                    o -> {
+                        map.put(o.getFieldName(), doc.get(o.getFieldName()));
                     }
             );
             list.add(map);
@@ -280,28 +279,37 @@ public class ShardSingleIndexLoadService {
 
     }
 
-    private BooleanQuery seggestQuery(String query) throws Exception {
-        //降维 布尔or 召回
-        QueryParser queryParser = new QueryParser("name", ikAnalyzer);
-        Query parse = queryParser.parse("name:" + query);
 
-        //原词分词召回
-        PhraseQuery tmpQuery = this.phraseQuery("name", query);
+    private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
+        Query query1 = QueryBuild.sugQuery(query);
 
-        //原词拼音分词召回
-        PhraseQuery pinyinQuery = this.phrasePinyinQuery("pinyin", query);
+        // 返回Top5的结果
+        int resultTopN = 10;
+        List<Map<String, String>> list = new ArrayList<>();
+        long start = System.nanoTime();
+        TopDocs prefixDocs = searcher.search(query1, resultTopN);
+        totle.addAndGet(prefixDocs.totalHits);
+        ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
+        for (int i = 0; i < scoreDocs4.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs4[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("type", "前缀");
+            fieldMap.values().stream()
+                    .filter(o -> o.getStored() == 1)
+                    .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
+            list.add(map);
+        }
 
-        //简拼全词召回
-        TermQuery jianpinQuery = this.jianpinQuery("jianpin", query);
+        log.info("分片【" + shardNum + "】召回花费：{}", System.nanoTime() - start);
 
-        BooleanQuery.Builder builder = new BooleanQuery.Builder();
-        builder.add(tmpQuery, BooleanClause.Occur.SHOULD);
-        builder.add(jianpinQuery, BooleanClause.Occur.SHOULD);
-        builder.add(pinyinQuery, BooleanClause.Occur.SHOULD);
-        builder.add(parse, BooleanClause.Occur.SHOULD);
+        return list;
 
-        return builder.build();
     }
+
 
     private TermQuery jianpinQuery(String fieldId, String query) throws IOException {
         return new TermQuery(new Term(fieldId, query));
@@ -323,9 +331,9 @@ public class ShardSingleIndexLoadService {
         OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
         PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
         tokenStream.reset();//必须
-        List<Pair<String,Integer>> terms = new ArrayList<>();
+        List<Pair<String, Integer>> terms = new ArrayList<>();
         while (tokenStream.incrementToken()) {
-            terms.add(Pair.of(termAtt.toString(),offsetAttribute.startOffset()));
+            terms.add(Pair.of(termAtt.toString(), offsetAttribute.startOffset()));
         }
         tokenStream.close();//必须
         String[] param = new String[terms.size()];
@@ -334,8 +342,8 @@ public class ShardSingleIndexLoadService {
         }
 
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
-        for (Pair<String,Integer> term : terms) {
-            TermQuery termQuery = new TermQuery(new Term(fieldId,term.getLeft()));
+        for (Pair<String, Integer> term : terms) {
+            TermQuery termQuery = new TermQuery(new Term(fieldId, term.getLeft()));
             builder.add(termQuery, BooleanClause.Occur.MUST);
         }
 
@@ -348,9 +356,9 @@ public class ShardSingleIndexLoadService {
         OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
         PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
         tokenStream.reset();//必须
-        List<Pair<String,Integer>> terms = new ArrayList<>();
+        List<Pair<String, Integer>> terms = new ArrayList<>();
         while (tokenStream.incrementToken()) {
-            terms.add(Pair.of(termAtt.toString(),offsetAttribute.startOffset()));
+            terms.add(Pair.of(termAtt.toString(), offsetAttribute.startOffset()));
         }
         tokenStream.close();//必须
         String[] param = new String[terms.size()];
@@ -359,11 +367,11 @@ public class ShardSingleIndexLoadService {
         }
 
         PhraseQuery.Builder builder = new PhraseQuery.Builder();
-        for (Pair<String,Integer> term : terms) {
-            builder.add(new Term(fieldId, term.getLeft()),term.getRight());
+        for (Pair<String, Integer> term : terms) {
+            builder.add(new Term(fieldId, term.getLeft()), term.getRight());
         }
 
-        builder.setSlop(0);
+        builder.setSlop(10);
 
         return builder.build();
     }
