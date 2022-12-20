@@ -28,24 +28,35 @@ public class QueryBuild {
      * */
     public static Query sugQuery(String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        builder.add(chinessQuery("name", query), BooleanClause.Occur.SHOULD);
+        builder.add(chinessQuery("used_name", query), BooleanClause.Occur.SHOULD);
+        builder.add(termPreQuery("jianpin", query), BooleanClause.Occur.SHOULD);
+        builder.add(termPreQuery("pinyin", query), BooleanClause.Occur.SHOULD);
+        builder.add(termPreQuery("credit_no", query), BooleanClause.Occur.SHOULD);
 
-        builder.add(chinessQuery("name",query), BooleanClause.Occur.SHOULD);
-        builder.add(chinessQuery("used_name",query), BooleanClause.Occur.SHOULD);
-        builder.add(termPreQuery("jianpin",query), BooleanClause.Occur.SHOULD);
-        builder.add(termPreQuery("pinyin",query), BooleanClause.Occur.SHOULD);
-        builder.add(termPreQuery("credit_no",query), BooleanClause.Occur.SHOULD);
-
-        builder.add(chinessQuery("product_brand_names",query), BooleanClause.Occur.SHOULD);
-        builder.add(chinessQuery("brand_names_algo",query), BooleanClause.Occur.SHOULD);
-        builder.add(chinessQuery("app_name",query), BooleanClause.Occur.SHOULD);
-        builder.add(chinessQuery("stock_name_short_array",query), BooleanClause.Occur.SHOULD);
+        builder.add(chinessQuery("product_brand_names", query), BooleanClause.Occur.SHOULD);
+        builder.add(chinessQuery("brand_names_algo", query), BooleanClause.Occur.SHOULD);
+        builder.add(chinessQuery("app_name", query), BooleanClause.Occur.SHOULD);
+        builder.add(chinessQuery("stock_name_short_array", query), BooleanClause.Occur.SHOULD);
 //        builder.add(chinessQuery("stock_code_new_array",query), BooleanClause.Occur.SHOULD);
-        builder.add(chinessQuery("oper_name",query), BooleanClause.Occur.SHOULD);
-
+        builder.add(chinessQuery("oper_name", query), BooleanClause.Occur.SHOULD);
 
 
         return builder.build();
 
+    }
+
+    public static Query fuzzyQuery(String query){
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        Query nameQuery = termPreQuery("fuzz_name", query);
+        Query usedNameQuery = termPreQuery("fuzz_used_name", query);
+        FuzzyQuery fuzNameQuery = new FuzzyQuery(new Term("fuzz_name",query),2,3,50,false);
+        FuzzyQuery fuzUsedNameQuery = new FuzzyQuery(new Term("fuzz_used_name",query),2,3,50,true);
+        builder.add(nameQuery,BooleanClause.Occur.SHOULD);
+        builder.add(usedNameQuery,BooleanClause.Occur.SHOULD);
+        builder.add(fuzNameQuery,BooleanClause.Occur.SHOULD);
+        builder.add(fuzUsedNameQuery,BooleanClause.Occur.SHOULD);
+        return builder.build();
     }
 
     public static Query chinessQuery(String field, String query) {

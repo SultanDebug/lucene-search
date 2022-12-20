@@ -4,6 +4,7 @@ import com.hzq.researchtest.analyzer.MyAllPinyinAnalyzer;
 import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.researchtest.config.FieldDef;
+import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -421,19 +422,23 @@ public class ShardSingleIndexService {
                 if (entry.getValue().getDbFieldFlag() == 1) {
                     continue;
                 }
-                val = valMap.get(entry.getValue().getParentField()).toString();
+                val = valMap.get(entry.getValue().getParentField());
                 if (Objects.isNull(val)) {
                     continue;
                 }
+            }
+            String fieldVal = StringTools.normalServerString(val.toString());
+            if(entry.getValue().getFieldType() == 2 || entry.getValue().getFieldType() == 3){
+                fieldVal = fieldVal.replaceAll(" ","");
             }
             Field.Store store = entry.getValue().getStored() == 0 ? Field.Store.NO : Field.Store.YES;
             IndexableField textField = null;
             switch (entry.getValue().getFieldType()) {
                 case 1:
-                    textField = new TextField(entry.getKey(), val.toString(), store);
+                    textField = new TextField(entry.getKey(), fieldVal, store);
                     break;
                 case 2:
-                    textField = new StringField(entry.getKey(), val.toString(), store);
+                    textField = new StringField(entry.getKey(), fieldVal, store);
                     break;
                 case 3:
                     //todo 未支持

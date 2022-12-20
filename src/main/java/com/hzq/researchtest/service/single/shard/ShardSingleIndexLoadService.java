@@ -280,6 +280,34 @@ public class ShardSingleIndexLoadService {
     }
 
 
+    /**
+     * 查询索引文档
+     * 第一步：创建一个Directory对象，也就是索引库存放的位置。
+     * 第二步：创建一个indexReader对象，需要指定Directory对象。
+     * 第三步：创建一个IndexSearcher对象，需要指定IndexReader对象
+     * 第四步：创建一个TermQuery对象，指定查询的域和查询的关键词。
+     * 第五步：执行查询。
+     * 第六步：返回查询结果。遍历查询结果并输出。
+     * 第七步：关闭IndexReader对象
+     *
+     * lucene查询语法：
+     * 1、使用Term去查询，Term的格式为  field:value  value将被视为一个整体，不分词。或者，field:"value"  value将被视为词组，会被分词
+     * 2、使用Field去查询，  field:value  ，不会对查询词进行分词，如果不指定field，则直接查默认field
+     * 3、通配符模糊查询， field:v?l*   ,其中？匹配一个字符，*匹配多个字符，实例可以匹配value、vilu，但是要注意，通配符不能出现在第一个字符上
+     * 4、相似度查询， field:value~   会查询出和value相似的内容，例如aalue、valua
+     * 5、指定距离查询，field:"hello world"~10    对这两个单词进行分词，如果两个词的间距在10个字符以内，则算匹配
+     * 6、范围查询，field:[N TO M}  [中括号表示包含，{大括号表示不包含， TO 关键字，必须大写，实例表示值在 N 到 M 之间，包含 N，不包含M
+     * 7、权重优先级，field:"hello^4  world",搜索和排序时，优先考虑hello
+     * 8、Term操作符组合多条件，AND、OR、NOT、+、-  ，都必须多个term才能用，且都大写
+     *    8.1、AND : field1:hello AND field2:world  表示field1字段必须有hello，同时field2字段也必须有world
+     *    8.2、OR ： field1:hello OR field2:world  表示field1字段有hello，或者，field2字段有world
+     *    8.3、NOT ： field1:hello NOT field2:world  表示field1字段必须有hello，同时，field2字段必须不能有world，NOT不能单独用
+     *    8.4、+ ： +field1:hello  field2:world  表示field1:hello必须有满足，类似AND ,如果term前面不带+-，则是说明可满足可不满足
+     *    8.5、- ： -field1:hello  field2:world  表示field1:hello必须不能满足，类似NOT
+     * 9、分组，(field1:hello AND field2:world) OR field3:hello  ,多个term时可以进行组合
+     * 10、特殊字符 + - && || ! ( ) { } [ ] ^ " ~ * ? : \ ，如果查询文本总就有特殊字符，则需要用\进行转义。
+     *     QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
+     * */
     private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
         Query query1 = QueryBuild.sugQuery(query);
 

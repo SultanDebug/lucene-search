@@ -33,6 +33,20 @@ configs:
           fieldType: 1
           stored: 1
           dbFieldFlag: 1
+        fuzz_name:
+          fieldName: fuzz_name
+          analyzerType: 1
+          fieldType: 2
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        fuzz_used_name:
+          fieldName: fuzz_used_name
+          analyzerType: 1
+          fieldType: 2
+          stored: 0
+          dbFieldFlag: 0
+          parentField: used_name
         used_name:
           fieldName: used_name
           analyzerType: 1

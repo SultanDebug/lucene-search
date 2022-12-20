@@ -5,6 +5,7 @@ import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
+import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
             log.warn("索引不存在{}", index);
             return null;
         }
+        query = StringTools.normalServerString(query);
         Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
         Map<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> indexLoadServiceMap = SHARD_INDEX_MAP.get(index);
         if (indexLoadServiceMap == null) {
@@ -45,8 +47,9 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
         long start = System.currentTimeMillis();
         try {
             AtomicLong totle = new AtomicLong(0);
+            String finalQuery = query;
             List<Supplier<List<Map<String,String>>>> list = indexLoadServiceMap.values().stream()
-                    .map(service -> (Supplier<List<Map<String,String>>>) () -> service.getRight().search(fieldMap,query,totle))
+                    .map(service -> (Supplier<List<Map<String,String>>>) () -> service.getRight().search(fieldMap, finalQuery,totle))
                     .collect(Collectors.toList());
 
             List<List<Map<String,String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
