@@ -71,10 +71,30 @@ configs:
           fieldType: 1
           stored: 1
           dbFieldFlag: 1
+        oper_name:
+          fieldName: oper_name
+          analyzerType: 5
+          fieldType: 1
+          stored: 1
+          specialChar: 32
+          dbFieldFlag: 1
+        oper_name_one:
+          fieldName: oper_name_one
+          analyzerType: 5
+          fieldType: 1
+          stored: 1
+          specialChar: 32
+          dbFieldFlag: 1
         stock_name_short_array:
           fieldName: stock_name_short_array
           analyzerType: 1
           fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        eid:
+          fieldName: eid
+          analyzerType: 1
+          fieldType: 2
           stored: 1
           dbFieldFlag: 1
         company_id:

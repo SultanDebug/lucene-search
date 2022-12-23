@@ -3,6 +3,7 @@ package com.hzq.researchtest.service.single.shard;
 import com.hzq.researchtest.analyzer.MyAllPinyinAnalyzer;
 import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
+import com.hzq.researchtest.analyzer.MySpecialCharAnalyzer;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
@@ -124,6 +125,7 @@ public class ShardSingleIndexService {
 
             mainIndex = new IndexWriter(fsDirectory, mainConf);
 
+            //todo 待完善
             mainIndex.forceMerge(1);
             mainIndex.flush();
             mainIndex.commit();
@@ -135,9 +137,11 @@ public class ShardSingleIndexService {
             log.error("索引合并失败：{}", e.getMessage(), e);
         } finally {
             try {
-                //fsDirectory.close();
                 if (mainIndex != null) {
                     mainIndex.close();
+                }
+                if(fsDirectory!=null){
+                    fsDirectory.close();
                 }
             } catch (Exception e) {
                 log.error("合并索引关闭失败：{}", e.getMessage(), e);
@@ -183,7 +187,7 @@ public class ShardSingleIndexService {
             log.error("索引参数未配置！");
             return;
         }
-        Directory fsDirectory;
+        Directory fsDirectory = null;
         IndexWriter mainIndex = null;
         try {
             IndexWriterConfig mainConf = this.getConfig(fieldConfigs);
@@ -204,12 +208,14 @@ public class ShardSingleIndexService {
 
             log.info("索引更新结束：{}", System.currentTimeMillis() - start);
         } catch (Exception e) {
-            log.error("索引初始化失败：{}", e.getMessage(), e);
+            log.error("索引初始化失败", e);
         } finally {
             try {
-                //fsDirectory.close();
                 if (mainIndex != null) {
                     mainIndex.close();
+                }
+                if(fsDirectory!=null){
+                    fsDirectory.close();
                 }
             } catch (Exception e) {
                 log.error("更新索引关闭失败：{}", e.getMessage(), e);
@@ -263,9 +269,11 @@ public class ShardSingleIndexService {
             log.error("索引初始化失败：{}", e.getMessage(), e);
         } finally {
             try {
-                //fsDirectory.close();
                 if (mainIndex != null) {
                     mainIndex.close();
+                }
+                if(fsDirectory!=null){
+                    fsDirectory.close();
                 }
             } catch (Exception e) {
                 log.error("初始化索引关闭失败：{}", e.getMessage(), e);
@@ -349,9 +357,9 @@ public class ShardSingleIndexService {
      */
     public void noticeSearcher() {
         try {
-            mainIndex.flush();
-            mainIndex.commit();
             if (mainIndex != null) {
+                mainIndex.flush();
+                mainIndex.commit();
                 mainIndex.close();
             }
             if (fsDirectory != null) {
@@ -393,6 +401,10 @@ public class ShardSingleIndexService {
                 case 4:
                     // 简拼字段使用标准分词器
                     analyzer = new MyAllPinyinAnalyzer();
+                    break;
+                case 5:
+                    // 特殊字符分词器
+                    analyzer = new MySpecialCharAnalyzer(entry.getValue().getSpecialChar());
                     break;
                 default:
                     // 默认使用ik分词器

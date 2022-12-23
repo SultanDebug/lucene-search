@@ -32,7 +32,7 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
      * @author Huangzq
      * @date 2022/12/6 19:33
      */
-    public Map<String,Object> search(String index, String query) {
+    public Map<String, Object> search(String index, String query) {
         if (!this.checkIndex(index)) {
             log.warn("索引不存在{}", index);
             return null;
@@ -48,11 +48,11 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
         try {
             AtomicLong totle = new AtomicLong(0);
             String finalQuery = query;
-            List<Supplier<List<Map<String,String>>>> list = indexLoadServiceMap.values().stream()
-                    .map(service -> (Supplier<List<Map<String,String>>>) () -> service.getRight().search(fieldMap, finalQuery,totle))
+            List<Supplier<List<Map<String, String>>>> list = indexLoadServiceMap.values().stream()
+                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().search(fieldMap, finalQuery, totle))
                     .collect(Collectors.toList());
 
-            List<List<Map<String,String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
+            List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
 
             List<Map<String, String>> res = collects.stream()
                     .flatMap(Collection::stream)
@@ -67,14 +67,16 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
                                 Double d2 = Double.parseDouble(o2.get("score"));
                                 return d2.compareTo(d1);
                             }).collect(Collectors.toList())
-                    ));
+                    ))
+                    .stream().limit(10)
+                    .collect(Collectors.toList());
 
             long time = System.currentTimeMillis() - start;
             log.info("分片查询结束：{}", time);
-            Map<String,Object> map = new HashMap<>();
-            map.put("totle",totle);
-            map.put("took",time);
-            map.put("data",res);
+            Map<String, Object> map = new HashMap<>();
+            map.put("totle", totle);
+            map.put("took", time);
+            map.put("data", res);
             return map;
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);

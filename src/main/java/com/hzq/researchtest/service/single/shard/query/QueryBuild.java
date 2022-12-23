@@ -25,12 +25,14 @@ public class QueryBuild {
 
     /**
      * name,used_name,product_brand_names,brand_names_algo,app_name,stock_name_short_array,stock_code_new_array,oper_name,credit_no
-     * */
-    public static Query sugQuery(String query) {
+     */
+    public static Query sugQuery(IndexSearcher searcher,String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
+
         builder.add(chinessQuery("name", query), BooleanClause.Occur.SHOULD);
         builder.add(chinessQuery("used_name", query), BooleanClause.Occur.SHOULD);
         builder.add(termPreQuery("jianpin", query), BooleanClause.Occur.SHOULD);
+        builder.add(termPreQuery("oper_name", query), BooleanClause.Occur.SHOULD);
         builder.add(termPreQuery("pinyin", query), BooleanClause.Occur.SHOULD);
         builder.add(termPreQuery("credit_no", query), BooleanClause.Occur.SHOULD);
 
@@ -44,6 +46,17 @@ public class QueryBuild {
 
         return builder.build();
 
+    }
+
+    public static Query booleanQuery(String query){
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+
+        BoostQuery boostQuery1 = new BoostQuery(termPreQuery("fuzz_name", query),5);
+        BoostQuery boostQuery2 = new BoostQuery(termPreQuery("fuzz_used_name", query),10);
+        builder.add(boostQuery1,BooleanClause.Occur.SHOULD);
+        builder.add(boostQuery2,BooleanClause.Occur.SHOULD);
+
+        return builder.build();
     }
 
     public static Query fuzzyQuery(String query){
@@ -65,7 +78,7 @@ public class QueryBuild {
         builder.add(prefixQuery(field, query), BooleanClause.Occur.SHOULD);
         builder.add(termQuery(field, query), BooleanClause.Occur.SHOULD);
         PhraseQuery phraseQuery = termsAndQuery(field, query);
-        if(phraseQuery!=null){
+        if (phraseQuery != null) {
             builder.add(phraseQuery, BooleanClause.Occur.SHOULD);
         }
 
@@ -73,7 +86,7 @@ public class QueryBuild {
 
     }
 
-    public static Query termPreQuery(String field , String query) {
+    public static Query termPreQuery(String field, String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         builder.add(prefixQuery(field, query), BooleanClause.Occur.SHOULD);
         builder.add(termQuery(field, query), BooleanClause.Occur.SHOULD);
@@ -110,8 +123,8 @@ public class QueryBuild {
             }
             builder.setSlop(3);
             return builder.build();
-        }catch (Exception e){
-            log.error("分词异常{}",query,e);
+        } catch (Exception e) {
+            log.error("分词异常{}", query, e);
         }
         return null;
     }
