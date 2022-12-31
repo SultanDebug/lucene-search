@@ -13,7 +13,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
-import java.sql.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
@@ -128,15 +127,17 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
             int size = 10000;
             long maxId = 0;
             long sum = 0;
-            while (true){
-                List<Map<String, Object>> tmps = query(errorSqls,jdbcTemplate,fields, maxId, size);
-                if(tmps == null){continue;}
+            while (true) {
+                List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate, fields, maxId, size);
+                if (tmps == null) {
+                    continue;
+                }
                 if (tmps.size() < size) {
                     break;
                 }
-                maxId = (long) tmps.get(tmps.size()-1).get("id");
+                maxId = (long) tmps.get(tmps.size() - 1).get("id");
                 res.addAll(tmps);
-                sum+=tmps.size();
+                sum += tmps.size();
                 log.info("数据加载进度：{}", sum);
             }
 
@@ -170,7 +171,8 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     /**
      * Description:
-     *  按页加载及索引生成
+     * 按页加载及索引生成
+     *
      * @param
      * @return
      * @author Huangzq
@@ -201,12 +203,14 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 entry.getValue().getLeft().deleteAll();
             }
 
-            int pageSize = 1000000;
+            int pageSize = 100000;
             long maxId = 0;
-            while (true){
-                List<Map<String, Object>> tmps = queryForPage(errorSqls,jdbcTemplate,fields, maxId, pageSize);
-                if(CollectionUtils.isEmpty(tmps)){continue;}
-                maxId = (long) tmps.get(tmps.size()-1).get("id");
+            while (true) {
+                List<Map<String, Object>> tmps = queryForPage(errorSqls, jdbcTemplate, fields, maxId, pageSize);
+                if (CollectionUtils.isEmpty(tmps)) {
+                    continue;
+                }
+                maxId = (long) tmps.get(tmps.size() - 1).get("id");
 
                 //开始初始化
                 Map<Long, List<Map<String, Object>>> collect = tmps.stream()
@@ -229,7 +233,9 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 }
                 System.gc();
                 log.info("总数据加载进度：{}", maxId);
-                if(maxId >= pageSize){break;}
+                if (maxId >= pageSize) {
+                    break;
+                }
             }
 
 
@@ -260,43 +266,47 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
      * @author Huangzq
      * @date 2022/12/6 19:36
      */
-    private List<Map<String, Object>> query(List<String> errorSqls,JdbcTemplate jdbcTemplate,Set<String> fields, long maxId , int size) {
+    private List<Map<String, Object>> query(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int size) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > "+maxId +" order by id " +" limit " + size ;
+        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + maxId + " order by id " + " limit " + size;
 
         try {
             log.info("数据页进度开始：{}", maxId);
             List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
-            log.info("数据页进度结束：{}",maxId);
+            log.info("数据页进度结束：{}", maxId);
             return maps;
-        }catch (Exception e){
+        } catch (Exception e) {
             try {
                 log.info("异常补偿开始：{}", maxId);
                 List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
-                log.info("异常补偿结束：{}",maxId);
+                log.info("异常补偿结束：{}", maxId);
                 return maps;
-            }catch (Exception e1){
+            } catch (Exception e1) {
                 errorSqls.add(sql);
             }
         }
         return null;
     }
 
-    private List<Map<String, Object>> queryForPage(List<String> errorSqls,JdbcTemplate jdbcTemplate,Set<String> fields, long maxId , int pageSize){
+    private List<Map<String, Object>> queryForPage(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int pageSize) {
         List<Map<String, Object>> res = new ArrayList<>();
         int size = 100000;
         long sum = 0;
-        while (true){
-            List<Map<String, Object>> tmps = query(errorSqls,jdbcTemplate,fields, maxId, size);
-            if(tmps == null){continue;}
+        while (true) {
+            List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate, fields, maxId, size);
+            if (tmps == null) {
+                continue;
+            }
             if (tmps.size() < size) {
                 break;
             }
 
-            maxId = (long) tmps.get(tmps.size()-1).get("id");
+            maxId = (long) tmps.get(tmps.size() - 1).get("id");
             res.addAll(tmps);
-            sum+=tmps.size();
-            if(res.size()>=pageSize){break;}
+            sum += tmps.size();
+            if (res.size() >= pageSize) {
+                break;
+            }
             log.info("数据加载进度：{}", sum);
         }
 
@@ -306,41 +316,42 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     /**
      * Description:
-     *  多线程加载
+     * 多线程加载
+     *
      * @param
      * @return
      * @author Huangzq
      * @date 2022/12/14 14:57
      */
-    private List<Map<String,Object>> call(List<String> errorSqls,Set<String> fields, JdbcTemplate jdbcTemplate, int cnt , long size){
+    private List<Map<String, Object>> call(List<String> errorSqls, Set<String> fields, JdbcTemplate jdbcTemplate, int cnt, long size) {
         long pageSize = 10000000;
-        long min = cnt*pageSize;
+        long min = cnt * pageSize;
         long max = min + pageSize;
 
-        List<Map<String,Object>> tmps = new ArrayList<>();
-        List<Map<String,Object>> res = Collections.synchronizedList(tmps);
+        List<Map<String, Object>> tmps = new ArrayList<>();
+        List<Map<String, Object>> res = Collections.synchronizedList(tmps);
 
         List<AsynUtil.TaskExecute> tasks = new ArrayList<>();
 
         long tmpMin = min;
-        long tmpMax = tmpMin+size;
-        while(true){
-            if(tmpMax>=max){
+        long tmpMax = tmpMin + size;
+        while (true) {
+            if (tmpMax >= max) {
                 long finalTmpMin = tmpMin;
                 AsynUtil.TaskExecute task = () -> {
                     try {
-                        log.info("数据页进度开始：{}，{}", finalTmpMin,max);
+                        log.info("数据页进度开始：{}，{}", finalTmpMin, max);
                         List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin, max);
-                        log.info("数据页进度结束：{}，{}，{}",finalTmpMin, max,query.size());
+                        log.info("数据页进度结束：{}，{}，{}", finalTmpMin, max, query.size());
                         res.addAll(query);
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         try {
-                            log.info("异常补偿开始：{}，{}", finalTmpMin,max);
+                            log.info("异常补偿开始：{}，{}", finalTmpMin, max);
                             List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin, max);
-                            log.info("异常补偿结束：{}，{}，{}",finalTmpMin, max,query.size());
+                            log.info("异常补偿结束：{}，{}，{}", finalTmpMin, max, query.size());
                             res.addAll(query);
-                        }catch (Exception e1){
-                            errorSqls.add(finalTmpMin+"/"+max);
+                        } catch (Exception e1) {
+                            errorSqls.add(finalTmpMin + "/" + max);
                         }
                     }
                 };
@@ -353,16 +364,16 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 try {
                     log.info("数据页进度开始：{}，{}", finalTmpMin1, finalTmpMax);
                     List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin1, finalTmpMax);
-                    log.info("数据页进度结束：{}，{}，{}",finalTmpMin1, finalTmpMax,query.size());
+                    log.info("数据页进度结束：{}，{}，{}", finalTmpMin1, finalTmpMax, query.size());
                     res.addAll(query);
-                }catch (Exception e){
+                } catch (Exception e) {
                     try {
                         log.info("异常补偿开始：{}，{}", finalTmpMin1, finalTmpMax);
                         List<Map<String, Object>> query = query(fields, jdbcTemplate, finalTmpMin1, finalTmpMax);
-                        log.info("异常补偿结束：{}，{}，{}",finalTmpMin1, finalTmpMax,query.size());
+                        log.info("异常补偿结束：{}，{}，{}", finalTmpMin1, finalTmpMax, query.size());
                         res.addAll(query);
-                    }catch (Exception e1){
-                        errorSqls.add(finalTmpMin1+"/"+finalTmpMax);
+                    } catch (Exception e1) {
+                        errorSqls.add(finalTmpMin1 + "/" + finalTmpMax);
                     }
 
                 }
@@ -374,23 +385,24 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
         }
 
         try {
-            AsynUtil.executeSync(executorService,tasks);
+            AsynUtil.executeSync(executorService, tasks);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
         return res;
     }
 
-    private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min , long max) {
+    private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min, long max) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > "+min +" and id<= "+max ;
+        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
     }
 
     /**
      * Description:
-     *  宽表数据库连接
+     * 宽表数据库连接
+     *
      * @param
      * @return
      * @author Huangzq

@@ -11,10 +11,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
-import org.apache.lucene.document.Document;
-import org.apache.lucene.document.Field;
-import org.apache.lucene.document.StringField;
-import org.apache.lucene.document.TextField;
+import org.apache.lucene.document.*;
 import org.apache.lucene.index.IndexWriter;
 import org.apache.lucene.index.IndexWriterConfig;
 import org.apache.lucene.index.IndexableField;
@@ -453,9 +450,12 @@ public class ShardSingleIndexService {
                     textField = new StringField(entry.getKey(), fieldVal, store);
                     break;
                 case 3:
-                    //todo 未支持
-                    //textField = new IntRange(entry.getKey(), entry.getValue(), store);
-                    //break;
+                    textField = new IntPoint(entry.getKey(), Integer.parseInt(fieldVal));
+                    doc.add(new NumericDocValuesField(entry.getKey(), Integer.parseInt(fieldVal)));
+                    if(store.equals(Field.Store.YES)){
+                        doc.add(new StoredField(entry.getKey(), Integer.parseInt(fieldVal)));
+                    }
+                    break;
                 default:
                     break;
             }

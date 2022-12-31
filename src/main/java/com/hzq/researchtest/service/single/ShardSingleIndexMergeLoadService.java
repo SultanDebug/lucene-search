@@ -1,6 +1,5 @@
 package com.hzq.researchtest.service.single;
 
-import com.alibaba.fastjson.JSON;
 import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;

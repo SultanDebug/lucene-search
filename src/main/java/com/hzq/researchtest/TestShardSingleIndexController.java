@@ -48,7 +48,7 @@ public class TestShardSingleIndexController {
     @Autowired
     private ShardSingleIndexMergeService shardIndexMergeService;
 
-    @GetMapping(value = "/shard/single/py-analyzer")
+    @GetMapping(value = "/shard/py-analyzer")
     public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart,@RequestParam("query") String query) throws Exception {
         MyOnlyPinyinAnalyzer ikAnalyzer = new MyOnlyPinyinAnalyzer(smart);
         TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
@@ -64,7 +64,7 @@ public class TestShardSingleIndexController {
         ikAnalyzer.close();
         return ResultResponse.success(res);
     }
-    @GetMapping(value = "/shard/single/ik-analyzer")
+    @GetMapping(value = "/shard/ik-analyzer")
     public ResultResponse<List<String>> ikAnalyzer(@RequestParam("smart") Boolean smart,@RequestParam("query") String query) throws Exception {
         IKAnalyzer ikAnalyzer = new IKAnalyzer(smart);
         TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
@@ -81,7 +81,7 @@ public class TestShardSingleIndexController {
         return ResultResponse.success(res);
     }
 
-    @GetMapping(value = "/shard/single/query")
+    @GetMapping(value = "/shard/query")
     public ResultResponse<Map<String,Object>> query(@RequestParam("index") String index, @RequestParam("query") String query) {
 
         Map<String,Object> name = shardIndexMergeLoadService.search(index, query);
@@ -89,19 +89,19 @@ public class TestShardSingleIndexController {
     }
 
 
-    @GetMapping(value = "/shard/single/create")
+    @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create(@RequestParam("index") String index) {
-        shardIndexMergeService.initIndex(index);
+        shardIndexMergeService.initShardIndexForPage(index);
         return ResultResponse.success();
     }
 
-    @PostMapping(value = "/shard/single/add/{index}")
+    @PostMapping(value = "/shard/add/{index}")
     public ResultResponse<String> add(@PathVariable("index") String index, @RequestBody Map<String, Object> data) {
         shardIndexMergeService.addIndex(index, data);
         return ResultResponse.success();
     }
 
-    @GetMapping(value = "/shard/single/merge")
+    @GetMapping(value = "/shard/merge")
     public ResultResponse<String> merge(@RequestParam("index") String index) {
         shardIndexMergeService.indexMerge(index);
         return ResultResponse.success();

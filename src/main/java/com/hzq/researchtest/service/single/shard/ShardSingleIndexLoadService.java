@@ -153,19 +153,27 @@ public class ShardSingleIndexLoadService {
     private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
 //        Query query1 = QueryBuild.fuzzyQuery(query);
 //        Query query1 = QueryBuild.booleanQuery(query);
-        Query query1 = QueryBuild.sugQuery(searcher,query);
+//        Query query1 = QueryBuild.sugQuery(searcher,query);
+        Query query1 = QueryBuild.sugQuery(query);
 
         // 返回Top5的结果
         int resultTopN = 10;
         List<Map<String, String>> list = new ArrayList<>();
         long start = System.nanoTime();
         TopDocs prefixDocs = searcher.search(query1, resultTopN);
+
+
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
         for (int i = 0; i < scoreDocs4.length; i++) {
             ScoreDoc scoreDoc = scoreDocs4[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
+
+            Explanation explain = searcher.explain(query1, scoreDoc.doc);
+
+            log.info("分片【{}】执行计划：{}",shardNum,explain);
+
             Map<String, String> map = new HashMap<>();
             map.put("score", String.valueOf(scoreDoc.score));
             map.put("shard", String.valueOf(shardNum));

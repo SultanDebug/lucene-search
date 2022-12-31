@@ -21,7 +21,7 @@ import java.util.List;
  * @description
  * @date 2022/11/17 19:49
  */
-@RestController
+//@RestController
 @Slf4j
 public class TestController {
 

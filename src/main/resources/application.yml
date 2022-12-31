@@ -1,9 +1,9 @@
 configs:
   indexMap:
     enterprise:
-      fsPath: C:\Users\zhenqiang.huang\Desktop\searchprocess\pydata\shard_index
+      fsPath: D:\searchfile\shard_single_index
       fsPathName: fsindex
-      incrPath: C:\Users\zhenqiang.huang\Desktop\searchprocess\pydata\shard_index
+      incrPath: D:\searchfile\shard_single_index
       incrPathName: mmapindex
       shardNum: 10
       fieldMap:
@@ -55,21 +55,24 @@ configs:
           dbFieldFlag: 1
         product_brand_names:
           fieldName: product_brand_names
-          analyzerType: 1
+          analyzerType: 5
           fieldType: 1
           stored: 1
+          specialChar: 32
           dbFieldFlag: 1
         brand_names_algo:
           fieldName: brand_names_algo
-          analyzerType: 1
+          analyzerType: 5
           fieldType: 1
           stored: 1
+          specialChar: 32
           dbFieldFlag: 1
         app_name:
           fieldName: app_name
-          analyzerType: 1
+          analyzerType: 5
           fieldType: 1
           stored: 1
+          specialChar: 32
           dbFieldFlag: 1
         oper_name:
           fieldName: oper_name
@@ -87,9 +90,10 @@ configs:
           dbFieldFlag: 1
         stock_name_short_array:
           fieldName: stock_name_short_array
-          analyzerType: 1
+          analyzerType: 5
           fieldType: 1
           stored: 1
+          specialChar: 32
           dbFieldFlag: 1
         eid:
           fieldName: eid
@@ -105,13 +109,20 @@ configs:
           dbFieldFlag: 1
         stock_code_new_array:
           fieldName: stock_code_new_array
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 5
+          fieldType: 1
           stored: 1
+          specialChar: 32
           dbFieldFlag: 1
         credit_no:
           fieldName: credit_no
           analyzerType: 1
           fieldType: 2
+          stored: 1
+          dbFieldFlag: 1
+        found_years:
+          fieldName: found_years
+          analyzerType: 1
+          fieldType: 3
           stored: 1
           dbFieldFlag: 1
