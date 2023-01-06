@@ -127,25 +127,5 @@ public class TermQueryTest {
     }
 
     public static void main(String[] args) throws Exception {
-
-        /*BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
-        String modelDirNew = "D:\\MavenRepo\\com\\bird\\segment\\bird-segment-server\\2.0.6-RELEASE\\segment";
-        Set<ExtendType> probExt = new HashSet();
-        Set<ExtendType> compExt = new HashSet();
-        probExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.SYNONYM);
-        compExt.add(ExtendType.HYPERNYM);
-        compExt.add(ExtendType.ARIBIC_PARSE);
-        birdExtendAnalyzer.init(modelDirNew, probExt, compExt);
-        //IKAnalyzer ikAnalyzer = new IKAnalyzer();
-
-
-        String arr[] = {"我是中国人", "同义词数量爆棚"};
-        MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
-
-
-        TermQueryTest termQueryTest = new TermQueryTest();
-        termQueryTest.doDemo();*/
     }
 }

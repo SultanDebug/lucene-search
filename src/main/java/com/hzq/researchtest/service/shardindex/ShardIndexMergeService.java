@@ -1,11 +1,10 @@
 package com.hzq.researchtest.service.shardindex;
 
-import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.shardindex.shard.ShardIndexService;
+import com.hzq.researchtest.util.AsynUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
 
 import java.sql.*;
@@ -148,7 +147,7 @@ public class ShardIndexMergeService extends IndexCommonService {
     private List<Map<String, String>> query(Set<String> fields, int offset, Statement stmt, int size) {
         String fieldStr = StringUtils.join(fields, ",");
         int start = offset * size;
-        String Sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide limit " + start + " , " + size;
+        String Sql = "select " + fieldStr + " from db.table limit " + start + " , " + size;
 
         List<Map<String, String>> lists = new ArrayList<>();
         try {
@@ -180,12 +179,12 @@ public class ShardIndexMergeService extends IndexCommonService {
     private Connection getCon() {
         Connection conn = null;
         String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
+        String url = "jdbc:mysql://host:3306/db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
         try {
             //注册（加载）驱动程序
             Class.forName(driver);
             //获取数据库接
-            conn = DriverManager.getConnection(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
+            conn = DriverManager.getConnection(url, "username", "pass");
         } catch (Exception e) {
             e.printStackTrace();
         }

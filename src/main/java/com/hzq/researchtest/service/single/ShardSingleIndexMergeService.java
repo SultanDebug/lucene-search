@@ -2,10 +2,10 @@ package com.hzq.researchtest.service.single;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
-import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
+import com.hzq.researchtest.util.AsynUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -111,9 +111,9 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
         try {
             //获取数据
 //            Connection con = getCon();
-            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
+            String url = "jdbc:mysql://host:3306/db";
 
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
+            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "username", "pass");
             List<Map<String, Object>> res = new ArrayList<>();
 //            Statement stmt = con.createStatement();
             List<String> errors = new ArrayList<>();
@@ -191,10 +191,10 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 .collect(Collectors.toSet());
         try {
             //获取数据
-//            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
-            String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db";
-//            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
+//            String url = "jdbc:mysql://host:3306/db";
+            String url = "jdbc:mysql://host:3306/db";
+//            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "username", "pass");
+            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "username", "pass");
 
             List<String> errors = new ArrayList<>();
             List<String> errorSqls = Collections.synchronizedList(errors);
@@ -268,7 +268,7 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
      */
     private List<Map<String, Object>> query(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int size) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + maxId + " order by id " + " limit " + size;
+        String sql = "select " + fieldStr + " from db.table where id > " + maxId + " order by id " + " limit " + size;
 
         try {
             log.info("数据页进度开始：{}", maxId);
@@ -394,7 +394,7 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
 
     private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min, long max) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + min + " and id<= " + max;
+        String sql = "select " + fieldStr + " from db.table where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
     }

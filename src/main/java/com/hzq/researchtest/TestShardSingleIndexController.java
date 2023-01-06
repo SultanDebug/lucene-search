@@ -1,7 +1,7 @@
 package com.hzq.researchtest;
 
-import com.bird.search.common.ResultResponse;
 import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
+import com.hzq.researchtest.service.ResultResponse;
 import com.hzq.researchtest.service.single.ShardSingleIndexMergeLoadService;
 import com.hzq.researchtest.service.single.ShardSingleIndexMergeService;
 import lombok.extern.slf4j.Slf4j;
@@ -49,7 +49,7 @@ public class TestShardSingleIndexController {
     private ShardSingleIndexMergeService shardIndexMergeService;
 
     @GetMapping(value = "/shard/py-analyzer")
-    public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart,@RequestParam("query") String query) throws Exception {
+    public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart, @RequestParam("query") String query) throws Exception {
         MyOnlyPinyinAnalyzer ikAnalyzer = new MyOnlyPinyinAnalyzer(smart);
         TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
         CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);

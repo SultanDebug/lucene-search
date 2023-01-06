@@ -1,6 +1,5 @@
 package com.hzq.researchtest.test;
 
-import com.hzq.researchtest.test.analyzer.MyAnalyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.document.Field;
@@ -45,7 +44,7 @@ public class TermSearchQueryTest {
 
     IndexWriter indexWriter = null;
 
-    private void initIndex(MyAnalyzer myAnalyzer) throws Exception {
+    private void initIndex() throws Exception {
         this.analyzer = new IKAnalyzer(false);
 //        this.analyzer = myAnalyzer;
         conf = new IndexWriterConfig(analyzer);
@@ -81,7 +80,7 @@ public class TermSearchQueryTest {
 
     public List<String> query(Connection conn, int offset, Statement stmt) {
         int start = offset * 10000;
-        String Sql = "select name from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide limit " + start + " , 10000";
+        String Sql = "select name from db.table limit " + start + " , 10000";
 
         List<String> lists = new ArrayList<>();
         try {
@@ -106,13 +105,13 @@ public class TermSearchQueryTest {
     public Connection getCon() {
         Connection conn = null;
         String driver = "com.mysql.cj.jdbc.Driver";
-        String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
+        String url = "jdbc:mysql://host:3306/db?characterEncoding=utf8&useSSL=false&allowMultiQueries=true";
         try {
             //注册（加载）驱动程序
             Class.forName(driver);
             try {
                 //获取数据库接
-                conn = DriverManager.getConnection(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
+                conn = DriverManager.getConnection(url, "username", "pass");
             } catch (SQLException e) {
                 System.out.println("getConnection:连接数据库失败");
                 e.printStackTrace();
@@ -124,8 +123,8 @@ public class TermSearchQueryTest {
         return conn;
     }
 
-    private void doDemo(MyAnalyzer analyzer) throws Exception {
-        initIndex(analyzer);
+    private void doDemo() throws Exception {
+        initIndex();
 
         //查询阶段
         IndexReader reader = DirectoryReader.open(indexWriter);
@@ -152,25 +151,8 @@ public class TermSearchQueryTest {
     }
 
     public static void main(String[] args) throws Exception {
-
-        /*BirdExtendAnalyzer birdExtendAnalyzer = new BirdExtendAnalyzer();
-        String modelDirNew = "D:\\MavenRepo\\com\\bird\\segment\\bird-segment-server\\2.0.6-RELEASE\\segment";
-        Set<ExtendType> probExt = new HashSet();
-        Set<ExtendType> compExt = new HashSet();
-        probExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.CASCADE);
-        compExt.add(ExtendType.SYNONYM);
-        compExt.add(ExtendType.HYPERNYM);
-        compExt.add(ExtendType.ARIBIC_PARSE);
-        birdExtendAnalyzer.init(modelDirNew, probExt, compExt);
-
-        MyAnalyzer analyzer = new MyAnalyzer(birdExtendAnalyzer);
-
-        TermSearchQueryTest termQueryTest = new TermSearchQueryTest();
-        termQueryTest.doDemo(analyzer);*/
-
         //ik
         TermSearchQueryTest termQueryTest = new TermSearchQueryTest();
-        termQueryTest.doDemo(null);
+        termQueryTest.doDemo();
     }
 }

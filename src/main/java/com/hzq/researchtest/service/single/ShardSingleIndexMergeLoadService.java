@@ -1,9 +1,9 @@
 package com.hzq.researchtest.service.single;
 
-import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
 import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
+import com.hzq.researchtest.util.AsynUtil;
 import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
