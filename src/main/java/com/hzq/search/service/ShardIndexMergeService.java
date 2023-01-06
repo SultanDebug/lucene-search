@@ -183,7 +183,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      */
     private List<Map<String, Object>> query(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int size) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + maxId + " order by id " + " limit " + size;
+        String sql = "select " + fieldStr + " from db.table where id > " + maxId + " order by id " + " limit " + size;
 
         try {
             log.info("数据页进度开始：{}", maxId);
@@ -309,7 +309,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
 
     private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min, long max) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + min + " and id<= " + max;
+        String sql = "select " + fieldStr + " from db.table where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
     }
