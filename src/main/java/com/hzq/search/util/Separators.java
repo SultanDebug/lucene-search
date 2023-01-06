@@ -1,9 +1,7 @@
 package com.hzq.search.util;
 
 /**
- * @ClassName Symbol
- * @Description TODO
- * @Date 2021/9/22 18:16
+ * 特殊字符
  **/
 public class Separators {
     public final static String SLASH = "/";

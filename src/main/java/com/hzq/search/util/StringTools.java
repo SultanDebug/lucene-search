@@ -2,9 +2,7 @@ package com.hzq.search.util;
 import java.io.UnsupportedEncodingException;
 
 /**
- * @className StringTools
- * @description 字符串常用操作
- * @date 2019/6/13 17:19
+ * 字符串常用操作
  **/
 public class StringTools {
     public static String normalServerString(String str) {
