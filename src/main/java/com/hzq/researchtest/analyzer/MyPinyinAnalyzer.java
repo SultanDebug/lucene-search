@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
+ * 带中文词项分词器
  * @author Huangzq
- * @description
  * @date 2022/11/22 10:56
  */
 public class MyPinyinAnalyzer extends Analyzer {

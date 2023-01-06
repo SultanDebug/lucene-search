@@ -9,12 +9,20 @@ import net.sourceforge.pinyin4j.format.HanyuPinyinVCharType;
 import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
 
 /**
+ * 拼音工具类
  * @author Huangzq
- * @description
  * @date 2022/11/22 09:44
  */
 @Slf4j
 public class PinyinUtil {
+    /**
+     * Description:
+     *  词项拼音生成
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:37
+     */
     public static String termToPinyin(String source) {
         HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
         //输出设置，大小写，音标方式等
@@ -43,6 +51,14 @@ public class PinyinUtil {
 
     }
 
+    /**
+     * Description:
+     *  词项简拼生成
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:37
+     */
     public static String termToJianpin(String source) {
         HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
         //输出设置，大小写，音标方式等

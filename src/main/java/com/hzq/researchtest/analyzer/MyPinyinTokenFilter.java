@@ -1,12 +1,11 @@
 package com.hzq.researchtest.analyzer;
 
-import com.hzq.researchtest.util.PinyinUtil;
+import com.bird.search.util.PinyinUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.util.AttributeSource;
 
 import java.io.IOException;
 
@@ -14,13 +13,12 @@ import java.io.IOException;
  * 中文  拼音合并分词
  *
  * @author Huangzq
- * @description
  * @date 2022/11/22 11:01
  */
 public class MyPinyinTokenFilter extends TokenFilter {
     private CharTermAttribute termAtt;
     private PositionIncrementAttribute posIncrAtt;
-    private AttributeSource.State current;
+    private State current;
     private int skippedPositions;
     private String term;
     private String prefix = "";
@@ -53,7 +51,7 @@ public class MyPinyinTokenFilter extends TokenFilter {
             }
             termAtt.setEmpty();
             termAtt.append(pinyinTerm);
-            posIncrAtt.setPositionIncrement(0);
+            posIncrAtt.setPositionIncrement(1);
             prefix = null;
             return true;
         }

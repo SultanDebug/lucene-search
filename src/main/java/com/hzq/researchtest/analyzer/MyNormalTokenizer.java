@@ -1,6 +1,6 @@
 package com.hzq.researchtest.analyzer;
 
-import com.bird.search.util.PinyinUtil;
+import com.bird.search.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Tokenizer;
@@ -11,18 +11,27 @@ import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import java.io.IOException;
 
 /**
- * 全拼分词器
+ * 归一化分词器
+ * whiteSpaceFlag：true-去除特殊字符占位字符   false-不去除
+ *
  * @author Huangzq
  * @date 2022/11/17 21:40
  */
 @Slf4j
-public class MyAllPinyinTokenizer extends Tokenizer {
+public class MyNormalTokenizer extends Tokenizer {
     private final CharTermAttribute termAtt = addAttribute(CharTermAttribute.class);
     private OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
     private PositionIncrementAttribute posIncrAtt = addAttribute(PositionIncrementAttribute.class);
     private String term = "";
 
+    private boolean whiteSpaceFlag = false;
+    ;
+
     private boolean flag = false;
+
+    public MyNormalTokenizer(boolean whiteSpaceFlag) {
+        this.whiteSpaceFlag = whiteSpaceFlag;
+    }
 
     @Override
     public boolean incrementToken() throws IOException {
@@ -34,8 +43,8 @@ public class MyAllPinyinTokenizer extends Tokenizer {
             term += String.valueOf((char) c);
         }
         flag = true;
-        String pinyin = PinyinUtil.termToPinyin(term);
-        if (StringUtils.isEmpty(pinyin)) {
+        String normalStr = whiteSpaceFlag ? StringTools.normalWithNotWordStr(term) : StringTools.normalStr(term);
+        if (StringUtils.isEmpty(normalStr)) {
             termAtt.copyBuffer(new char[]{}, 0, 0);
             termAtt.resizeBuffer(0);
             termAtt.setLength(0);
@@ -43,11 +52,11 @@ public class MyAllPinyinTokenizer extends Tokenizer {
             offsetAtt.setOffset(0, 0);
             return true;
         }
-        termAtt.copyBuffer(pinyin.toCharArray(), 0, pinyin.length());
-        termAtt.resizeBuffer(pinyin.length());
-        termAtt.setLength(pinyin.length());
+        termAtt.copyBuffer(normalStr.toCharArray(), 0, normalStr.length());
+        termAtt.resizeBuffer(normalStr.length());
+        termAtt.setLength(normalStr.length());
         posIncrAtt.setPositionIncrement(1);
-        offsetAtt.setOffset(0, pinyin.length());
+        offsetAtt.setOffset(0, normalStr.length());
         return true;
     }
 

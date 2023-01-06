@@ -1,11 +1,11 @@
-package com.hzq.researchtest.service.single;
+package com.hzq.researchtest.service;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
 import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
+import com.hzq.researchtest.service.shard.ShardIndexLoadService;
+import com.hzq.researchtest.service.shard.ShardIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,12 +19,11 @@ import java.util.stream.Collectors;
 
 /**
  * @author Huangzq
- * @description
  * @date 2022/11/30 15:28
  */
 @Service
 @Slf4j
-public class ShardSingleIndexMergeService extends SingleIndexCommonService {
+public class ShardIndexMergeService extends IndexCommonAbstract {
     /**
      * Description:
      * 索引合并，并发所有分片合并主、增量索引，并通知所有搜索实例更新索引信息
@@ -79,95 +78,13 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
         Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
 
         Long shadId = id % shardNum;
-        ShardSingleIndexService shardIndexService = SHARD_INDEX_MAP.get(index).get(shadId.intValue()).getLeft();
+        ShardIndexService shardIndexService = SHARD_INDEX_MAP.get(index).get(shadId.intValue()).getLeft();
         if (shardIndexService == null) {
             log.error("数据分片异常：{}", shadId);
             return;
         }
         shardIndexService.addIndex(fieldMap, idStr, data);
     }
-
-    /**
-     * Description:
-     * 索引初始化
-     * 按分片数哈希分布，并发初始化
-     *
-     * @param
-     * @return
-     * @author Huangzq
-     * @date 2022/12/6 19:35
-     */
-    public List<String> initIndex(String index) {
-        if (!this.checkIndex(index)) {
-            return null;
-        }
-        Integer shardNum = indexConfig.getIndexMap().get(index).getShardNum();
-        Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
-
-        Set<String> fields = fieldMap.values().stream()
-                .filter(o -> o.getDbFieldFlag() == 1)
-                .map(FieldDef::getFieldName)
-                .collect(Collectors.toSet());
-        try {
-            //获取数据
-//            Connection con = getCon();
-            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
-
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
-            List<Map<String, Object>> res = new ArrayList<>();
-//            Statement stmt = con.createStatement();
-            List<String> errors = new ArrayList<>();
-            List<String> errorSqls = Collections.synchronizedList(errors);
-            /*for (int i = 0; i < 11; i++) {
-                List<Map<String, Object>> call = call(errorSqls,fields, jdbcTemplate, i, 10000);
-                res.addAll(call);
-                log.info("数据加载进度：{}", i);
-            }*/
-
-            int size = 10000;
-            long maxId = 0;
-            long sum = 0;
-            while (true) {
-                List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate, fields, maxId, size);
-                if (tmps == null) {
-                    continue;
-                }
-                if (tmps.size() < size) {
-                    break;
-                }
-                maxId = (long) tmps.get(tmps.size() - 1).get("id");
-                res.addAll(tmps);
-                sum += tmps.size();
-                log.info("数据加载进度：{}", sum);
-            }
-
-            //开始初始化
-            Map<Long, List<Map<String, Object>>> collect = res.stream()
-                    .collect(Collectors.groupingBy(o -> (Long) o.get("id") % shardNum
-                            , Collectors.mapping(o1 -> o1, Collectors.toList())));
-
-            List<AsynUtil.TaskExecute> tasks = SHARD_INDEX_MAP.get(index).entrySet().stream()
-                    .map(o -> (AsynUtil.TaskExecute) () -> {
-                        List<Map<String, Object>> list = collect.get(o.getKey().longValue());
-                        if (CollectionUtils.isEmpty(list)) {
-                            return;
-                        }
-                        o.getValue().getLeft().initIndex(fieldMap, list);
-                    }).collect(Collectors.toList());
-
-            AsynUtil.executeSync(executorService, tasks);
-
-            log.error("失败sql：{}", JSON.toJSONString(errorSqls));
-
-            return errorSqls;
-
-
-        } catch (Exception e) {
-            log.error("索引初始化调度失败：{}", e.getMessage(), e);
-        }
-        return null;
-    }
-
 
     /**
      * Description:
@@ -191,15 +108,13 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
                 .collect(Collectors.toSet());
         try {
             //获取数据
-//            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
-            String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db";
-//            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
+            String url = "jdbc:mysql://host:3306/db";
+            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "username", "pass");
 
             List<String> errors = new ArrayList<>();
             List<String> errorSqls = Collections.synchronizedList(errors);
 
-            for (Map.Entry<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
+            for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
                 entry.getValue().getLeft().deleteAll();
             }
 
@@ -239,7 +154,7 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
             }
 
 
-            for (Map.Entry<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
+            for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
                 entry.getValue().getLeft().noticeSearcher();
             }
 
@@ -417,4 +332,6 @@ public class ShardSingleIndexMergeService extends SingleIndexCommonService {
         dataSource.setConnectTimeout(-1);
         return new JdbcTemplate(dataSource);
     }
+
+
 }

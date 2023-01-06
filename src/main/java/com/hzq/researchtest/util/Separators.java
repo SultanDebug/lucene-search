@@ -1,8 +1,8 @@
 package com.hzq.researchtest.util;
 
 /**
- * @ClassName Symbol
- * @Description TODO
+ * @ClassName Symbol TODO
+ * @Author liuxiangqian
  * @Date 2021/9/22 18:16
  **/
 public class Separators {
@@ -19,7 +19,7 @@ public class Separators {
     public final static String WELL_NUMBER = "#";
     public final static String EXCLAMATION = "!";
 
-    public final static char CHAR_SlASH = '/';
+    public final static char CHAR_SLASH = '/';
     public final static char CHAR_COMMA = ',';
     public final static char CHAR_DOT = '.';
     public final static char CHAR_HORIZONTAL_BAR = '-';

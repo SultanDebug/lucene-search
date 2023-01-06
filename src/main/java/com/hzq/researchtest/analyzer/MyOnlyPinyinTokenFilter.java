@@ -1,6 +1,6 @@
 package com.hzq.researchtest.analyzer;
 
-import com.hzq.researchtest.util.PinyinUtil;
+import com.bird.search.util.PinyinUtil;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.TokenFilter;
 import org.apache.lucene.analysis.TokenStream;
@@ -14,7 +14,6 @@ import java.io.IOException;
  * ik拼音合并分词
  *
  * @author Huangzq
- * @description
  * @date 2022/11/22 11:01
  */
 public class MyOnlyPinyinTokenFilter extends TokenFilter {
@@ -61,7 +60,7 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         term = termAtt.toString();
         if (StringUtils.isNotEmpty(prefix) && term.length() >= minTermLength) {
             while (true) {
-                if (StringUtils.isEmpty(prefix)) {
+                if(StringUtils.isEmpty(prefix)){
                     return false;
                 }
                 char c = prefix.charAt(0);
@@ -79,7 +78,7 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         if (input.incrementToken()) {
             skippedPositions = 0;
             term = termAtt.toString();
-            if (term.length() > 1) {
+            if(term.length()>1){
                 prefix = term;
             }
             if (term.length() >= minTermLength) {

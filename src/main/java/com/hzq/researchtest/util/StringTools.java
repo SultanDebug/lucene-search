@@ -2,37 +2,57 @@ package com.hzq.researchtest.util;
 import java.io.UnsupportedEncodingException;
 
 /**
- * @className StringTools
- * @description 字符串常用操作
+ * @author liuxiangqian
+ * @version 1.0
+ * @className StringTools 字符串常用操作
  * @date 2019/6/13 17:19
  **/
 public class StringTools {
+    /**
+     * 字符串格式化：特殊符号替换为空格，全半转换，大小写，繁简转换
+     * @param str 原串
+     * @return 格式化结果
+     * @author Huangzq
+     * @date 2023/1/4 14:18
+     */
     public static String normalServerString(String str) {
         String normalStr = str;
         normalStr = full2HalfChange(normalStr);
         normalStr = traditionalToSimple(normalStr);
         normalStr = normalStr.toLowerCase();
-        normalStr = replaceNotWordWithStr(normalStr, Separators.SPACE);
+        normalStr = replaceNotWordWithStrExceptChar(normalStr, Separators.SPACE);
         return normalStr;
     }
 
-    public static String normalTrainString(String str) {
+    /**
+     * 保留特殊符号的字符串格式化，全半转换，大小写，繁简转换
+     * @param str 原串
+     * @return 格式化结果
+     * @author Huangzq
+     * @date 2023/1/4 14:18
+     */
+    public static String normalStr(String str) {
         String normalStr = str;
         normalStr = full2HalfChange(normalStr);
         normalStr = traditionalToSimple(normalStr);
         normalStr = normalStr.toLowerCase();
-        normalStr = replaceNotWordWithStr(normalStr, Separators.TAB);
-        //这条语句保证标点符号保留下来
-        normalStr = normalStr.replaceAll("\t\t", Separators.TAB);
-        //任何连续两个空白字符，都替换为空格
-        normalStr = normalStr.replaceAll("[\\s]{2,}", Separators.SPACE);
-        normalStr = normalStr.replaceAll("  ", Separators.SPACE);
-        normalStr = normalStr.trim();
         return normalStr;
     }
 
-    public static String normalSynonymString(String str) {
-        return normalServerString(str);
+    /**
+     * 字符串格式化：特殊符号去除，全半转换，大小写，繁简转换
+     * @param str 原串
+     * @return 格式化结果
+     * @author Huangzq
+     * @date 2023/1/4 14:18
+     */
+    public static String normalWithNotWordStr(String str) {
+        String normalStr = str;
+        normalStr = full2HalfChange(normalStr);
+        normalStr = traditionalToSimple(normalStr);
+        normalStr = normalStr.toLowerCase();
+        normalStr = replaceNotWordWithStr(normalStr, Separators.EMPTY_STRING);
+        return normalStr;
     }
 
     /**
@@ -195,7 +215,7 @@ public class StringTools {
      * @param replaceStr
      * @return
      */
-    private static String replaceNotWordWithStr(final String input, String replaceStr) {
+    private static String replaceNotWordWithStrExceptChar(final String input, String replaceStr) {
         final StringBuilder builder = new StringBuilder();
         for (final char c : input.toCharArray()) {
             if (Character.isLetterOrDigit(c)) {
@@ -208,9 +228,26 @@ public class StringTools {
                 }
             }
         }
+        return builder.toString();
+    }
 
-        String newStr = builder.toString();
-        return newStr;
+    /**
+     * 去除所有的非文字符号，并用replaceStr替代
+     *
+     * @param input
+     * @param replaceStr
+     * @return
+     */
+    private static String replaceNotWordWithStr(final String input, String replaceStr) {
+        final StringBuilder builder = new StringBuilder();
+        for (final char c : input.toCharArray()) {
+            if (Character.isLetterOrDigit(c)) {
+                builder.append(Character.isLowerCase(c) ? c : Character.toLowerCase(c));
+            } else {
+                builder.append(replaceStr);
+            }
+        }
+        return builder.toString();
     }
 
     private static String traditionalToSimple(String tradStr) {
@@ -219,8 +256,8 @@ public class StringTools {
     }
 
     public static void main(String[] args){
-        String str = "野生海捕大虾新鲜冷冻活虾厄瓜多尔尔尔白虾基围虾对虾非青岛大虾包邮";
+        String str = "鬼 地方个aBC%*測試";
 
-        System.out.println(str);
+        System.out.println(normalWithNotWordStr(str));
     }
 }

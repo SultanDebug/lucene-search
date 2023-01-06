@@ -1,6 +1,6 @@
 package com.hzq.researchtest.analyzer;
 
-import com.hzq.researchtest.util.PinyinUtil;
+import com.bird.search.util.PinyinUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.analysis.Tokenizer;
@@ -12,7 +12,6 @@ import java.io.IOException;
 
 /**
  * @author Huangzq
- * @description
  * @date 2022/11/17 21:40
  */
 @Slf4j

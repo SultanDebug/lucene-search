@@ -1,10 +1,11 @@
-package com.hzq.researchtest.service.single;
+package com.hzq.researchtest.service;
+
 
 import com.hzq.researchtest.config.FieldDef;
 import com.hzq.researchtest.config.IndexConfig;
 import com.hzq.researchtest.config.IndexShardConfig;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
+import com.hzq.researchtest.service.shard.ShardIndexLoadService;
+import com.hzq.researchtest.service.shard.ShardIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 
@@ -18,12 +19,11 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * @author Huangzq
- * @description
  * @date 2022/12/5 19:11
  */
 @Slf4j
-public abstract class SingleIndexCommonService {
-    public static ExecutorService executorService = new ThreadPoolExecutor(50,
+public abstract class IndexCommonAbstract {
+    public static ExecutorService executorService = new ThreadPoolExecutor(100,
             1000,
             0L,
             TimeUnit.MILLISECONDS,
@@ -31,7 +31,7 @@ public abstract class SingleIndexCommonService {
     @Resource
     public IndexConfig indexConfig;
 
-    public static Map<String, Map<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>>> SHARD_INDEX_MAP = new HashMap<>();
+    public static Map<String, Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>>> SHARD_INDEX_MAP = new HashMap<>();
 
 
     /**
@@ -54,7 +54,7 @@ public abstract class SingleIndexCommonService {
         }
 
         //已初始化
-        Map<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> indexServiceMap = SHARD_INDEX_MAP.get(index);
+        Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> indexServiceMap = SHARD_INDEX_MAP.get(index);
         if (indexServiceMap != null) {
             return true;
         }
@@ -66,12 +66,12 @@ public abstract class SingleIndexCommonService {
         String fsPathName = indexShardConfig.getFsPathName();
         Map<String, FieldDef> fieldMap = indexShardConfig.getFieldMap();
 
-        Map<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> map = new HashMap<>();
+        Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> map = new HashMap<>();
         for (int i = 0; i < shardNum; i++) {
-            ShardSingleIndexLoadService loadService = new ShardSingleIndexLoadService();
+            ShardIndexLoadService loadService = new ShardIndexLoadService();
             loadService.setShardNum(i);
             loadService.setFsPath(fsPath, i, fsPathName);
-            ShardSingleIndexService service = new ShardSingleIndexService();
+            ShardIndexService service = new ShardIndexService();
             service.setShardNum(i);
             service.setShardIndexLoadService(loadService);
             service.setFsPath(fsPath, i, fsPathName);

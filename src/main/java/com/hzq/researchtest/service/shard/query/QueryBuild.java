@@ -1,5 +1,6 @@
-package com.hzq.researchtest.service.single.shard.query;
+package com.hzq.researchtest.service.shard.query;
 
+import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
@@ -8,6 +9,7 @@ import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
+import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
@@ -19,7 +21,6 @@ import java.util.List;
 
 /**
  * @author Huangzq
- * @description
  * @date 2022/12/15 16:28
  */
 @Slf4j
@@ -81,6 +82,40 @@ public class QueryBuild {
         builder.add(IntPoint.newRangeQuery("found_years",1,3), BooleanClause.Occur.MUST);
 
         return builder.build();
+    }
+
+    public static Query singleWordQuery(String query){
+
+        BooleanQuery.Builder singleWordQuery = new BooleanQuery.Builder();
+        String normalQuery = StringTools.normalWithNotWordStr(query);
+        singleWordQuery.setMinimumNumberShouldMatch((int) Math.round(normalQuery.length()*0.8));
+
+        for (char c : normalQuery.toCharArray()) {
+            TermQuery termQuery = new TermQuery(new Term("single_fuzz_name",String.valueOf(c)));
+            //ConstantScoreQuery scoreQuery = new ConstantScoreQuery(termQuery);
+            //BoostQuery boostQuery = new BoostQuery(scoreQuery,1);
+            singleWordQuery.add(termQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
+
+        BooleanQuery.Builder yearsCondition = new BooleanQuery.Builder();
+        yearsCondition.add(IntPoint.newRangeQuery("found_years",1,10), BooleanClause.Occur.SHOULD);
+        yearsCondition.add(IntPoint.newRangeQuery("found_years",15,20), BooleanClause.Occur.SHOULD);
+
+        BooleanQuery.Builder capiCondition = new BooleanQuery.Builder();
+        capiCondition.add(DoublePoint.newRangeQuery("reg_capi",0,30), BooleanClause.Occur.SHOULD);
+        capiCondition.add(DoublePoint.newRangeQuery("reg_capi",900,1000), BooleanClause.Occur.SHOULD);
+
+        filterCondition.add(yearsCondition.build(),BooleanClause.Occur.MUST);
+        filterCondition.add(capiCondition.build(),BooleanClause.Occur.MUST);
+
+        BooleanQuery.Builder complexQuery = new BooleanQuery.Builder();
+        complexQuery.add(singleWordQuery.build(), BooleanClause.Occur.MUST);
+        complexQuery.add(filterCondition.build(), BooleanClause.Occur.FILTER);
+
+
+        return complexQuery.build();
     }
 
     public static Query booleanQuery(String query){

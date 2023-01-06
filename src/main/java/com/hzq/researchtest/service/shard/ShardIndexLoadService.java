@@ -1,25 +1,16 @@
-package com.hzq.researchtest.service.single.shard;
+package com.hzq.researchtest.service.shard;
 
 import com.hzq.researchtest.config.FieldDef;
-import com.hzq.researchtest.service.single.shard.query.QueryBuild;
+import com.hzq.researchtest.service.shard.query.QueryBuild;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.commons.lang3.tuple.Pair;
-import org.apache.lucene.analysis.Analyzer;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
-import org.apache.lucene.index.Term;
-import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.apache.lucene.search.similarities.BooleanSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
-import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -34,29 +25,40 @@ import java.util.concurrent.atomic.AtomicLong;
  * 问题：需要定制查询
  *
  * @author Huangzq
- * @description
  * @date 2022/12/2 10:02
  */
 @Slf4j
-public class ShardSingleIndexLoadService {
-    //文件索引存储地址
+public class ShardIndexLoadService {
+    /**
+     * 文件索引存储地址
+     */
     private String fsPath;
-    //分片数量
+    /**
+     * 分片数量
+     */
     private int shardNum;
 
-    //文件索引地址
+    /**
+     * 文件索引地址
+     */
     private Directory fsDirectory;
-    //文件索引查询器
+    /**
+     * 文件索引查询器
+     */
     private IndexSearcher fsSearcher;
 
-    //文件索引io
+    /**
+     * 文件索引io
+     */
     private IndexReader fsReader;
 
     public void setShardNum(int shardNum) {
         this.shardNum = shardNum;
     }
 
-    //地址组成 主路径+分片id+主索引/增量索引名
+    /**
+     * 地址组成 主路径+分片id+主索引/增量索引名
+     */
     public void setFsPath(String fsPath, int shardNum, String fsPathName) {
         this.fsPath = fsPath + "\\" + shardNum + "\\" + fsPathName;
         this.shardNum = shardNum;
@@ -82,6 +84,7 @@ public class ShardSingleIndexLoadService {
             fsDirectory = FSDirectory.open(Paths.get(fsPath));
             fsReader = DirectoryReader.open(fsDirectory);
             fsSearcher = new IndexSearcher(fsReader);
+            fsSearcher.setSimilarity(new BooleanSimilarity());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -120,7 +123,6 @@ public class ShardSingleIndexLoadService {
     }
 
 
-
     /**
      * 查询索引文档
      * 第一步：创建一个Directory对象，也就是索引库存放的位置。
@@ -130,7 +132,7 @@ public class ShardSingleIndexLoadService {
      * 第五步：执行查询。
      * 第六步：返回查询结果。遍历查询结果并输出。
      * 第七步：关闭IndexReader对象
-     *
+     * <p>
      * lucene查询语法：
      * 1、使用Term去查询，Term的格式为  field:value  value将被视为一个整体，不分词。或者，field:"value"  value将被视为词组，会被分词
      * 2、使用Field去查询，  field:value  ，不会对查询词进行分词，如果不指定field，则直接查默认field
@@ -140,27 +142,31 @@ public class ShardSingleIndexLoadService {
      * 6、范围查询，field:[N TO M}  [中括号表示包含，{大括号表示不包含， TO 关键字，必须大写，实例表示值在 N 到 M 之间，包含 N，不包含M
      * 7、权重优先级，field:"hello^4  world",搜索和排序时，优先考虑hello
      * 8、Term操作符组合多条件，AND、OR、NOT、+、-  ，都必须多个term才能用，且都大写
-     *    8.1、AND : field1:hello AND field2:world  表示field1字段必须有hello，同时field2字段也必须有world
-     *    8.2、OR ： field1:hello OR field2:world  表示field1字段有hello，或者，field2字段有world
-     *    8.3、NOT ： field1:hello NOT field2:world  表示field1字段必须有hello，同时，field2字段必须不能有world，NOT不能单独用
-     *    8.4、+ ： +field1:hello  field2:world  表示field1:hello必须有满足，类似AND ,如果term前面不带+-，则是说明可满足可不满足
-     *    8.5、- ： -field1:hello  field2:world  表示field1:hello必须不能满足，类似NOT
+     * 8.1、AND : field1:hello AND field2:world  表示field1字段必须有hello，同时field2字段也必须有world
+     * 8.2、OR ： field1:hello OR field2:world  表示field1字段有hello，或者，field2字段有world
+     * 8.3、NOT ： field1:hello NOT field2:world  表示field1字段必须有hello，同时，field2字段必须不能有world，NOT不能单独用
+     * 8.4、+ ： +field1:hello  field2:world  表示field1:hello必须有满足，类似AND ,如果term前面不带+-，则是说明可满足可不满足
+     * 8.5、- ： -field1:hello  field2:world  表示field1:hello必须不能满足，类似NOT
      * 9、分组，(field1:hello AND field2:world) OR field3:hello  ,多个term时可以进行组合
      * 10、特殊字符 + - && || ! ( ) { } [ ] ^ " ~ * ? : \ ，如果查询文本总就有特殊字符，则需要用\进行转义。
-     *     QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
-     * */
+     * QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
+     */
 
     private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
 //        Query query1 = QueryBuild.fuzzyQuery(query);
 //        Query query1 = QueryBuild.booleanQuery(query);
 //        Query query1 = QueryBuild.sugQuery(searcher,query);
-        Query query1 = QueryBuild.sugQuery(query);
+//        Query query1 = QueryBuild.sugQuery(query);
+        Query query1 = QueryBuild.singleWordQuery(query);
 
         // 返回Top5的结果
         int resultTopN = 10;
         List<Map<String, String>> list = new ArrayList<>();
         long start = System.nanoTime();
-        TopDocs prefixDocs = searcher.search(query1, resultTopN);
+
+        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE,true),new SortField("company_score", SortField.Type.DOUBLE,false));
+
+        TopDocs prefixDocs = searcher.search(query1, resultTopN,sort,true,false);
 
 
         totle.addAndGet(prefixDocs.totalHits);
@@ -172,7 +178,7 @@ public class ShardSingleIndexLoadService {
 
             Explanation explain = searcher.explain(query1, scoreDoc.doc);
 
-            log.info("分片【{}】执行计划：{}",shardNum,explain);
+            log.info("分片【{}】执行计划：{}", shardNum, explain);
 
             Map<String, String> map = new HashMap<>();
             map.put("score", String.valueOf(scoreDoc.score));

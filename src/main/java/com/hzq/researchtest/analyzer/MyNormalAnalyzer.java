@@ -1,5 +1,6 @@
 package com.hzq.researchtest.analyzer;
 
+import lombok.extern.slf4j.Slf4j;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
@@ -10,21 +11,30 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
- * 全拼分词器
+ * 归一化分词器
+ * whiteSpaceFlag：true-去除特殊字符占位字符   false-不去除
+ *
  * @author Huangzq
  * @date 2022/11/22 10:56
  */
-public class MyAllPinyinAnalyzer extends Analyzer {
+@Slf4j
+public class MyNormalAnalyzer extends Analyzer {
+    boolean whiteSpaceFlag = false;
+
+    public MyNormalAnalyzer(boolean whiteSpaceFlag) {
+        this.whiteSpaceFlag = whiteSpaceFlag;
+    }
+
     @Override
     protected TokenStreamComponents createComponents(String s) {
-        MyAllPinyinTokenizer myAllPinyinTokenizer = new MyAllPinyinTokenizer();
-        return new TokenStreamComponents(myAllPinyinTokenizer);
+        MyNormalTokenizer tokenizer = new MyNormalTokenizer(whiteSpaceFlag);
+        return new TokenStreamComponents(tokenizer);
     }
 
     public static void main(String[] args) throws IOException {
-        MyAllPinyinAnalyzer analyzer = new MyAllPinyinAnalyzer();
-        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "青岛亚太物资有限公司"};
-
+        MyNormalAnalyzer analyzer = new MyNormalAnalyzer(false);
+        String arr[] = {"Abc@$測試", "aBC%*測試"};
+        System.out.println((int) ';');
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));
             CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);

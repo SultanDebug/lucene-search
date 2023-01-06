@@ -1,11 +1,7 @@
-package com.hzq.researchtest.service.single.shard;
+package com.hzq.researchtest.service.shard;
 
-import com.hzq.researchtest.analyzer.MyAllPinyinAnalyzer;
-import com.hzq.researchtest.analyzer.MyJianpinAnalyzer;
-import com.hzq.researchtest.analyzer.MyOnlyPinyinAnalyzer;
-import com.hzq.researchtest.analyzer.MySpecialCharAnalyzer;
+import com.hzq.researchtest.analyzer.*;
 import com.hzq.researchtest.config.FieldDef;
-import com.hzq.researchtest.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
@@ -19,7 +15,6 @@ import org.apache.lucene.index.Term;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.util.CollectionUtils;
-import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.nio.file.Paths;
 import java.util.*;
@@ -31,13 +26,12 @@ import java.util.*;
  * 3.主索引、增量索引合并
  *
  * @author Huangzq
- * @description
  * @date 2022/12/2 10:01
  */
 @Slf4j
-public class ShardSingleIndexService {
+public class ShardIndexService {
     //索引数据修改需要通知查询器更新索引信息
-    private ShardSingleIndexLoadService shardIndexLoadService;
+    private ShardIndexLoadService shardIndexLoadService;
 
     //分片数
     private int shardNum;
@@ -51,7 +45,7 @@ public class ShardSingleIndexService {
         this.shardNum = shardNum;
     }
 
-    public void setShardIndexLoadService(ShardSingleIndexLoadService shardIndexLoadService) {
+    public void setShardIndexLoadService(ShardIndexLoadService shardIndexLoadService) {
         this.shardIndexLoadService = shardIndexLoadService;
     }
 
@@ -83,7 +77,7 @@ public class ShardSingleIndexService {
         }
 
         // 对于没有指定的分词器的字段，使用标准分词器
-        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new IKAnalyzer(false), fieldAnalyzers);
+        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new MyIkAnalyzer(false), fieldAnalyzers);
 
         IndexWriterConfig conf = new IndexWriterConfig(analyzer);
         conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
@@ -137,7 +131,7 @@ public class ShardSingleIndexService {
                 if (mainIndex != null) {
                     mainIndex.close();
                 }
-                if(fsDirectory!=null){
+                if (fsDirectory != null) {
                     fsDirectory.close();
                 }
             } catch (Exception e) {
@@ -211,7 +205,7 @@ public class ShardSingleIndexService {
                 if (mainIndex != null) {
                     mainIndex.close();
                 }
-                if(fsDirectory!=null){
+                if (fsDirectory != null) {
                     fsDirectory.close();
                 }
             } catch (Exception e) {
@@ -219,64 +213,6 @@ public class ShardSingleIndexService {
             }
         }
 
-    }
-
-    /**
-     * Description:
-     * 索引初始化
-     *
-     * @param fieldMap 字段配置信息
-     * @param res      当前分片文档集合
-     * @return
-     * @author Huangzq
-     * @date 2022/12/6 19:26
-     */
-    public void initIndex(Map<String, FieldDef> fieldMap, List<Map<String, Object>> res) {
-        if (StringUtils.isBlank(fsPath) || shardIndexLoadService == null) {
-            log.error("索引参数未配置！");
-            return;
-        }
-        Directory fsDirectory = null;
-        IndexWriter mainIndex = null;
-        try {
-            IndexWriterConfig conf = this.getConfig(fieldConfigs);
-            fsDirectory = FSDirectory.open(Paths.get(fsPath));
-            mainIndex = new IndexWriter(fsDirectory, conf);
-
-            // 每次运行demo先清空索引目录中的索引文件
-            mainIndex.deleteAll();
-            mainIndex.flush();
-            mainIndex.commit();
-
-            long start = System.currentTimeMillis();
-
-            for (Map<String, Object> map : res) {
-                Document document = this.docByConfig(fieldMap, map);
-                mainIndex.addDocument(document);
-            }
-            log.info("分片：{}，加载进度：{}，花费：{}", shardNum, res.get(res.size() - 1).get("id"), System.currentTimeMillis() - start);
-
-            mainIndex.flush();
-            mainIndex.commit();
-
-            shardIndexLoadService.indexUpdate();
-
-            log.info("分片：{}，加载进度：{}，索引构建结束：{}", shardNum, res.get(res.size() - 1).get("id"), System.currentTimeMillis() - start);
-        } catch (Exception e) {
-            log.error("索引初始化失败：{}", e.getMessage(), e);
-        } finally {
-            try {
-                if (mainIndex != null) {
-                    mainIndex.close();
-                }
-                if(fsDirectory!=null){
-                    fsDirectory.close();
-                }
-            } catch (Exception e) {
-                log.error("初始化索引关闭失败：{}", e.getMessage(), e);
-            }
-
-        }
     }
 
     /**
@@ -385,7 +321,7 @@ public class ShardSingleIndexService {
             switch (entry.getValue().getAnalyzerType()) {
                 case 1:
                     // 字段使用ik分词器
-                    analyzer = new IKAnalyzer(false);
+                    analyzer = new MyIkAnalyzer(false);
                     break;
                 case 2:
                     // 拼音字段使用标准分词器
@@ -396,16 +332,28 @@ public class ShardSingleIndexService {
                     analyzer = new MyJianpinAnalyzer();
                     break;
                 case 4:
-                    // 简拼字段使用标准分词器
+                    // 全拼字段使用标准分词器
                     analyzer = new MyAllPinyinAnalyzer();
                     break;
                 case 5:
                     // 特殊字符分词器
                     analyzer = new MySpecialCharAnalyzer(entry.getValue().getSpecialChar());
                     break;
+                case 6:
+                    // 归一化不替换特殊字符分词器
+                    analyzer = new MyNormalAnalyzer(false);
+                    break;
+                case 7:
+                    // 归一化替换特殊字符分词器
+                    analyzer = new MyNormalAnalyzer(true);
+                    break;
+                case 8:
+                    // 单字归一化分词器
+                    analyzer = new MySingleCharAnalyzer();
+                    break;
                 default:
-                    // 默认使用ik分词器
-                    analyzer = new IKAnalyzer(false);
+                    // 默认使用ik归一化分词器
+                    analyzer = new MyIkAnalyzer(false);
                     break;
             }
             list.add(Pair.of(entry.getKey(), analyzer));
@@ -436,24 +384,32 @@ public class ShardSingleIndexService {
                     continue;
                 }
             }
-            String fieldVal = StringTools.normalServerString(val.toString());
+            String fieldVal = val.toString();
+            /*String fieldVal = StringTools.normalServerString(val.toString());
             if(entry.getValue().getFieldType() == 2 || entry.getValue().getFieldType() == 3){
                 fieldVal = fieldVal.replaceAll(" ","");
-            }
+            }*/
             Field.Store store = entry.getValue().getStored() == 0 ? Field.Store.NO : Field.Store.YES;
-            IndexableField textField = null;
+            IndexableField field = null;
             switch (entry.getValue().getFieldType()) {
                 case 1:
-                    textField = new TextField(entry.getKey(), fieldVal, store);
+                    field = new TextField(entry.getKey(), fieldVal, store);
                     break;
                 case 2:
-                    textField = new StringField(entry.getKey(), fieldVal, store);
+                    field = new StringField(entry.getKey(), fieldVal, store);
                     break;
                 case 3:
-                    textField = new IntPoint(entry.getKey(), Integer.parseInt(fieldVal));
+                    field = new IntPoint(entry.getKey(), Integer.parseInt(fieldVal));
                     doc.add(new NumericDocValuesField(entry.getKey(), Integer.parseInt(fieldVal)));
-                    if(store.equals(Field.Store.YES)){
+                    if (store.equals(Field.Store.YES)) {
                         doc.add(new StoredField(entry.getKey(), Integer.parseInt(fieldVal)));
+                    }
+                    break;
+                case 4:
+                    field = new DoublePoint(entry.getKey(), Double.parseDouble(fieldVal));
+                    doc.add(new DoubleDocValuesField(entry.getKey(), Double.parseDouble(fieldVal)));
+                    if (store.equals(Field.Store.YES)) {
+                        doc.add(new StoredField(entry.getKey(), Double.parseDouble(fieldVal)));
                     }
                     break;
                 default:
@@ -461,7 +417,7 @@ public class ShardSingleIndexService {
             }
 
             //文档标准化，特殊字符、大小写、简繁、全半等
-            doc.add(textField);
+            doc.add(field);
         }
         return doc;
     }

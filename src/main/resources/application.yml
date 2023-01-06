@@ -1,6 +1,12 @@
 configs:
   indexMap:
     enterprise:
+      #      fsPath: D:\searchfile\v1\shard-index-sug
+      #      fsPath: D:\searchfile\v2\shard-index-sug
+      #      fsPath: D:\searchfile\v3\shard-index-sug
+      #      fsPath: D:\searchfile\v4\shard-index-sug
+      #      fsPath: D:\searchfile\v5\shard-index-sug
+      #      fsPath: D:\searchfile\shard_single_index
       fsPath: D:\searchfile\shard_single_index
       fsPathName: fsindex
       incrPath: D:\searchfile\shard_single_index
@@ -10,7 +16,7 @@ configs:
         id:
           fieldName: id
           analyzerType: 1
-          fieldType: 2
+          fieldType: 1
           stored: 1
           dbFieldFlag: 1
         pinyin:
@@ -35,15 +41,29 @@ configs:
           dbFieldFlag: 1
         fuzz_name:
           fieldName: fuzz_name
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 7
+          fieldType: 1
           stored: 0
           dbFieldFlag: 0
           parentField: name
         fuzz_used_name:
           fieldName: fuzz_used_name
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 7
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: used_name
+        single_fuzz_name:
+          fieldName: single_fuzz_name
+          analyzerType: 8
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        single_fuzz_used_name:
+          fieldName: single_fuzz_used_name
+          analyzerType: 8
+          fieldType: 1
           stored: 0
           dbFieldFlag: 0
           parentField: used_name
@@ -58,53 +78,53 @@ configs:
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         brand_names_algo:
           fieldName: brand_names_algo
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         app_name:
           fieldName: app_name
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         oper_name:
           fieldName: oper_name
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         oper_name_one:
           fieldName: oper_name_one
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         stock_name_short_array:
           fieldName: stock_name_short_array
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         eid:
           fieldName: eid
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 6
+          fieldType: 1
           stored: 1
           dbFieldFlag: 1
         company_id:
           fieldName: company_id
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 6
+          fieldType: 1
           stored: 1
           dbFieldFlag: 1
         stock_code_new_array:
@@ -112,17 +132,29 @@ configs:
           analyzerType: 5
           fieldType: 1
           stored: 1
-          specialChar: 32
+          specialChar: 59
           dbFieldFlag: 1
         credit_no:
           fieldName: credit_no
-          analyzerType: 1
-          fieldType: 2
+          analyzerType: 6
+          fieldType: 1
           stored: 1
           dbFieldFlag: 1
         found_years:
           fieldName: found_years
           analyzerType: 1
           fieldType: 3
+          stored: 1
+          dbFieldFlag: 1
+        company_score:
+          fieldName: company_score
+          analyzerType: 1
+          fieldType: 4
+          stored: 1
+          dbFieldFlag: 1
+        reg_capi:
+          fieldName: reg_capi
+          analyzerType: 1
+          fieldType: 4
           stored: 1
           dbFieldFlag: 1

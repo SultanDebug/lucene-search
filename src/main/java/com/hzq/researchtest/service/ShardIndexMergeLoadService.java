@@ -1,10 +1,9 @@
-package com.hzq.researchtest.service.single;
+package com.hzq.researchtest.service;
 
 import com.bird.search.utils.AsynUtil;
 import com.hzq.researchtest.config.FieldDef;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexLoadService;
-import com.hzq.researchtest.service.single.shard.ShardSingleIndexService;
-import com.hzq.researchtest.util.StringTools;
+import com.hzq.researchtest.service.shard.ShardIndexLoadService;
+import com.hzq.researchtest.service.shard.ShardIndexService;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.stereotype.Service;
@@ -16,12 +15,11 @@ import java.util.stream.Collectors;
 
 /**
  * @author Huangzq
- * @description
  * @date 2022/11/30 17:18
  */
 @Service
 @Slf4j
-public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
+public class ShardIndexMergeLoadService extends IndexCommonAbstract {
     /**
      * Description:
      * 搜索入口，并发搜索所有分片
@@ -36,9 +34,10 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
             log.warn("索引不存在{}", index);
             return null;
         }
-        query = StringTools.normalServerString(query);
+        //todo normal
+        //query = StringTools.normalServerString(query);
         Map<String, FieldDef> fieldMap = indexConfig.getIndexMap().get(index).getFieldMap();
-        Map<Integer, Pair<ShardSingleIndexService, ShardSingleIndexLoadService>> indexLoadServiceMap = SHARD_INDEX_MAP.get(index);
+        Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> indexLoadServiceMap = SHARD_INDEX_MAP.get(index);
         if (indexLoadServiceMap == null) {
             log.warn("索引不存在{}", index);
             return null;
@@ -46,9 +45,9 @@ public class ShardSingleIndexMergeLoadService extends SingleIndexCommonService {
         long start = System.currentTimeMillis();
         try {
             AtomicLong totle = new AtomicLong(0);
-            String finalQuery = query;
+            //String finalQuery = query;
             List<Supplier<List<Map<String, String>>>> list = indexLoadServiceMap.values().stream()
-                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().search(fieldMap, finalQuery, totle))
+                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().search(fieldMap, query, totle))
                     .collect(Collectors.toList());
 
             List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);

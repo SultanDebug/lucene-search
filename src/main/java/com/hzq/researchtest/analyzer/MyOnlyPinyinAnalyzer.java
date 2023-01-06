@@ -12,8 +12,8 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
+ * 不带中文词项的拼音分词器
  * @author Huangzq
- * @description
  * @date 2022/11/22 10:56
  */
 public class MyOnlyPinyinAnalyzer extends Analyzer {
@@ -34,7 +34,7 @@ public class MyOnlyPinyinAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         MyOnlyPinyinAnalyzer analyzer = new MyOnlyPinyinAnalyzer(true);
-        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "同义词数量爆棚"};
+        String arr[] = {"维正知识产权科技有限公司"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

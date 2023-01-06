@@ -10,20 +10,22 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
- * 全拼分词器
+ * 单字分词器，带归一化
+ *
  * @author Huangzq
  * @date 2022/11/22 10:56
  */
-public class MyAllPinyinAnalyzer extends Analyzer {
+public class MySingleCharAnalyzer extends Analyzer {
     @Override
     protected TokenStreamComponents createComponents(String s) {
-        MyAllPinyinTokenizer myAllPinyinTokenizer = new MyAllPinyinTokenizer();
-        return new TokenStreamComponents(myAllPinyinTokenizer);
+        MySingleCharTokenizer tokenizer = new MySingleCharTokenizer();
+        MySingleCharTokenFilter filter = new MySingleCharTokenFilter(tokenizer);
+        return new TokenStreamComponents(tokenizer, filter);
     }
 
     public static void main(String[] args) throws IOException {
-        MyAllPinyinAnalyzer analyzer = new MyAllPinyinAnalyzer();
-        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "青岛亚太物资有限公司"};
+        MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer();
+        String arr[] = {"鬼 地方个aBC%*測試"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

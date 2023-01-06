@@ -10,8 +10,9 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
+ * 简拼分词器
+ *      此分词器还是考虑分词器，好通用处理
  * @author Huangzq
- * @description
  * @date 2022/11/22 10:56
  */
 public class MyJianpinAnalyzer extends Analyzer {

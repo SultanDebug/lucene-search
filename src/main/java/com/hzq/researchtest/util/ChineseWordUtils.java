@@ -2,7 +2,6 @@
  * 对中文进行繁体转简体
  *
  * @className ChineseWordUtils
- * @description
  * @author kangyingyiong
  * @date 2020/2/18 15:29
  * @version 1.0
