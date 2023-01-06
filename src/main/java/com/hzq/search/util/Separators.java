@@ -1,10 +1,5 @@
 package com.hzq.search.util;
 
-/**
- * @ClassName Symbol TODO
- * @Author liuxiangqian
- * @Date 2021/9/22 18:16
- **/
 public class Separators {
     public final static String SLASH = "/";
     public final static String COMMA = ",";

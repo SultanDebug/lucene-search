@@ -2,10 +2,7 @@ package com.hzq.search.util;
 import java.io.UnsupportedEncodingException;
 
 /**
- * @author liuxiangqian
- * @version 1.0
- * @className StringTools 字符串常用操作
- * @date 2019/6/13 17:19
+ * 字符串格式化
  **/
 public class StringTools {
     /**

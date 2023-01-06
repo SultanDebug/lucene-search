@@ -36,7 +36,7 @@ public class MyIkAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         IKAnalyzer ikAnalyzer = new IKAnalyzer(true);
-        String arr[] = {"维正[知]測試识产权科技有限公司"};
+        String arr[] = {"[]測試科技有限公司"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(arr[i]));
@@ -52,7 +52,7 @@ public class MyIkAnalyzer extends Analyzer {
         }
 
         MyIkAnalyzer analyzer = new MyIkAnalyzer(true);
-        String arr1[] = {"维正[知]測試识产权科技有限公司"};
+        String arr1[] = {"[]測試科技有限公司"};
 
         for (int i = 0; i < arr1.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr1[i]));

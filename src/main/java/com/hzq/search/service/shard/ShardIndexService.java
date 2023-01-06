@@ -385,10 +385,6 @@ public class ShardIndexService {
                 }
             }
             String fieldVal = val.toString();
-            /*String fieldVal = StringTools.normalServerString(val.toString());
-            if(entry.getValue().getFieldType() == 2 || entry.getValue().getFieldType() == 3){
-                fieldVal = fieldVal.replaceAll(" ","");
-            }*/
             Field.Store store = entry.getValue().getStored() == 0 ? Field.Store.NO : Field.Store.YES;
             IndexableField field = null;
             switch (entry.getValue().getFieldType()) {
