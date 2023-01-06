@@ -42,6 +42,6 @@
             <Appender-ref ref="INFO_FILE" />
             <Appender-ref ref="ERROR_FILE" />
         </Root>
-        <Logger name="com.bird" level="${env:BUS_LOG_LEVEL}"></Logger>
+        <Logger name="com.hzq" level="${env:BUS_LOG_LEVEL}"></Logger>
     </Loggers>
 </Configuration>
