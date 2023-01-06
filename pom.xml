@@ -193,7 +193,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.hzq.researchtest.ResearchTestApplication</mainClass>
+                    <mainClass>com.hzq.search.ResearchTestApplication</mainClass>
                 </configuration>
             </plugin>
             <plugin>
