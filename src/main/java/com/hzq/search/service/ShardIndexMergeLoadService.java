@@ -30,7 +30,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
      * @date 2022/12/6 19:33
      */
     public Map<String, Object> search(String index, String query) {
-        if (!this.checkIndex(index)) {
+        if (!this.checkIndex(false,index)) {
             log.warn("索引不存在{}", index);
             return null;
         }

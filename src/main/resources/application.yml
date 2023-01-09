@@ -1,17 +1,15 @@
 configs:
   indexMap:
     enterprise:
-      #      fsPath: D:\searchfile\v1\shard-index-sug
-      #      fsPath: D:\searchfile\v2\shard-index-sug
-      #      fsPath: D:\searchfile\v3\shard-index-sug
-      #      fsPath: D:\searchfile\v4\shard-index-sug
       #      fsPath: D:\searchfile\v5\shard-index-sug
       #      fsPath: D:\searchfile\shard_single_index
-      fsPath: D:\searchfile\shard_single_index
+      fsPath: D:\searchfile\shard_index_fs
+      aliaPath: D:\searchfile\shard_index_alia
       fsPathName: fsindex
-      incrPath: D:\searchfile\shard_single_index
-      incrPathName: mmapindex
+      #      incrPath: D:\searchfile\shard_single_index
+      #      incrPathName: mmapindex
       shardNum: 10
+      switchIndex: D:\searchfile\switch.data
       fieldMap:
         id:
           fieldName: id

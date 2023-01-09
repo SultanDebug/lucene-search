@@ -34,7 +34,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      * @date 2022/12/6 19:33
      */
     public void indexMerge(String index) {
-        if (!this.checkIndex(index)) {
+        if (!this.checkIndex(false,index)) {
             return;
         }
         long start = System.currentTimeMillis();
@@ -63,7 +63,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      * @date 2022/12/6 19:35
      */
     public void addIndex(String index, Map<String, Object> data) {
-        if (!this.checkIndex(index)) {
+        if (!this.checkIndex(false,index)) {
             return;
         }
 
@@ -96,7 +96,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      * @date 2022/12/14 17:59
      */
     public List<String> initShardIndexForPage(String index) {
-        if (!this.checkIndex(index)) {
+        if (!this.checkIndex(true,index)) {
             return null;
         }
         Integer shardNum = indexConfig.getIndexMap().get(index).getShardNum();
@@ -108,8 +108,10 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 .collect(Collectors.toSet());
         try {
             //获取数据
-            String url = "jdbc:mysql://host:3306/db";
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "username", "pass");
+//            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
+            String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db";
+//            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
+            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
 
             List<String> errors = new ArrayList<>();
             List<String> errorSqls = Collections.synchronizedList(errors);
@@ -158,6 +160,8 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 entry.getValue().getLeft().noticeSearcher();
             }
 
+            this.saveCurrentIndexInfo(index,CUR_INDEX_MAP.get(index));
+
 
             log.error("失败sql：{}", JSON.toJSONString(errorSqls));
 
@@ -183,7 +187,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      */
     private List<Map<String, Object>> query(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int size) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from db.table where id > " + maxId + " order by id " + " limit " + size;
+        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + maxId + " order by id " + " limit " + size;
 
         try {
             log.info("数据页进度开始：{}", maxId);
@@ -309,7 +313,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
 
     private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min, long max) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from db.table where id > " + min + " and id<= " + max;
+        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
     }
@@ -332,6 +336,4 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         dataSource.setConnectTimeout(-1);
         return new JdbcTemplate(dataSource);
     }
-
-
 }

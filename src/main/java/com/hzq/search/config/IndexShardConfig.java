@@ -10,11 +10,19 @@ import java.util.Map;
  */
 @Data
 public class IndexShardConfig {
+    /**
+     * 索引切换当前索引记录文件
+     */
+    private String switchIndex;
 
     /**
      * 文件索引
      */
     private String fsPath;
+    /**
+     * 初始化备份索引
+     */
+    private String aliaPath;
     private String fsPathName;
 
     /**
@@ -22,6 +30,7 @@ public class IndexShardConfig {
      */
     private String incrPath;
     private String incrPathName;
+
     /**
      * 分片数
      */
@@ -30,5 +39,4 @@ public class IndexShardConfig {
      * 字段配置
      */
     private Map<String, FieldDef> fieldMap;
-
 }
