@@ -63,7 +63,13 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                             , v -> v.stream().sorted((o1, o2) -> {
                                 Double d1 = Double.parseDouble(o1.get("score"));
                                 Double d2 = Double.parseDouble(o2.get("score"));
-                                return d2.compareTo(d1);
+                                if(!d1.equals(d2)){
+                                    return d2.compareTo(d1);
+                                }else{
+                                    Double d3 = Double.parseDouble(o1.get("company_score"));
+                                    Double d4 = Double.parseDouble(o2.get("company_score"));
+                                    return d4.compareTo(d3);
+                                }
                             }).collect(Collectors.toList())
                     ))
                     .stream().limit(10)

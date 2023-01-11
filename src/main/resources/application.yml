@@ -1,15 +1,20 @@
 configs:
   indexMap:
     enterprise:
+      dbUrl: jdbc:mysql://url:port/db
+      dbTableName: table
+      dbUserName: username
+      dbPass: pass
+
       #      fsPath: D:\searchfile\v5\shard-index-sug
       #      fsPath: D:\searchfile\shard_single_index
-      fsPath: D:\searchfile\shard_index_fs
-      aliaPath: D:\searchfile\shard_index_alia
+      fsPath: /appstore/shard_index_fs
+      aliaPath: /appstore/shard_index_alia
       fsPathName: fsindex
       #      incrPath: D:\searchfile\shard_single_index
       #      incrPathName: mmapindex
-      shardNum: 10
-      switchIndex: D:\searchfile\switch.data
+      shardNum: 50
+      switchIndex: /appstore/switch.data
       fieldMap:
         id:
           fieldName: id

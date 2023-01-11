@@ -16,6 +16,7 @@ import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 import org.springframework.util.CollectionUtils;
 
+import java.io.File;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -51,7 +52,7 @@ public class ShardIndexService {
 
     //地址组成 主路径+分片id+主索引/增量索引名
     public void setFsPath(String fsPath, int shardNum, String fsPathName) {
-        this.fsPath = fsPath + "\\" + shardNum + "\\" + fsPathName;
+        this.fsPath = fsPath + File.separator + shardNum + File.separator + fsPathName;
         this.shardNum = shardNum;
     }
 
@@ -385,6 +386,10 @@ public class ShardIndexService {
                 }
             }
             String fieldVal = val.toString();
+            /*String fieldVal = StringTools.normalServerString(val.toString());
+            if(entry.getValue().getFieldType() == 2 || entry.getValue().getFieldType() == 3){
+                fieldVal = fieldVal.replaceAll(" ","");
+            }*/
             Field.Store store = entry.getValue().getStored() == 0 ? Field.Store.NO : Field.Store.YES;
             IndexableField field = null;
             switch (entry.getValue().getFieldType()) {

@@ -11,6 +11,23 @@ import java.util.Map;
 @Data
 public class IndexShardConfig {
     /**
+     * 索引数据库链接
+     */
+    private String dbUrl;
+    /**
+     * 索引表名
+     */
+    private String dbTableName;
+    /**
+     * 索引数据库用户名
+     */
+    private String dbUserName;
+    /**
+     * 索引数据库密码
+     */
+    private String dbPass;
+
+    /**
      * 索引切换当前索引记录文件
      */
     private String switchIndex;

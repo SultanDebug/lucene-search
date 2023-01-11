@@ -92,8 +92,6 @@ public class QueryBuild {
 
         for (char c : normalQuery.toCharArray()) {
             TermQuery termQuery = new TermQuery(new Term("single_fuzz_name",String.valueOf(c)));
-            //ConstantScoreQuery scoreQuery = new ConstantScoreQuery(termQuery);
-            //BoostQuery boostQuery = new BoostQuery(scoreQuery,1);
             singleWordQuery.add(termQuery, BooleanClause.Occur.SHOULD);
         }
 

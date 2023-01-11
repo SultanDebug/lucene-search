@@ -1,4 +1,25 @@
+spring:
+  application:
+    name: lucene-search
+  jackson:
+    default-property-inclusion: non_null # 忽略null的值
+
 server:
   port: 8888
+
+
+management:
+  #  security:
+  #    enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: "info,health,prometheus"
+  endpoint:
+    health:
+      show-details: never
+    shutdown:
+      enabled: false
+
 logging:
   config: classpath:log4j2.xml

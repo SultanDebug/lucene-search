@@ -3,6 +3,7 @@ package com.hzq.search.service;
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
 import com.hzq.search.config.FieldDef;
+import com.hzq.search.config.IndexShardConfig;
 import com.hzq.search.service.shard.ShardIndexLoadService;
 import com.hzq.search.service.shard.ShardIndexService;
 import com.hzq.search.util.AsynUtil;
@@ -106,12 +107,12 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 .filter(o -> o.getDbFieldFlag() == 1)
                 .map(FieldDef::getFieldName)
                 .collect(Collectors.toSet());
+
+        IndexShardConfig indexShardConfig = indexConfig.getIndexMap().get(index);
         try {
             //获取数据
-//            String url = "jdbc:mysql://bird-search-db-test.qizhidao.net:3306/bird_search_db";
-            String url = "jdbc:mysql://bird-search-db-dev.qizhidao.net:3306/bird_search_db";
-//            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "NTN8Mw2mGGsgs7IDUBea");
-            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, "bird_search_ro", "0fhfdws9jr3NXS5g5g90");
+            String url = indexShardConfig.getDbUrl();
+            JdbcTemplate jdbcTemplate = createJdbcTemplate(url, indexShardConfig.getDbUserName(), indexShardConfig.getDbPass());
 
             List<String> errors = new ArrayList<>();
             List<String> errorSqls = Collections.synchronizedList(errors);
@@ -123,7 +124,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
             int pageSize = 100000;
             long maxId = 0;
             while (true) {
-                List<Map<String, Object>> tmps = queryForPage(errorSqls, jdbcTemplate, fields, maxId, pageSize);
+                List<Map<String, Object>> tmps = queryForPage(errorSqls, jdbcTemplate,indexShardConfig.getDbTableName(), fields, maxId, pageSize);
                 if (CollectionUtils.isEmpty(tmps)) {
                     continue;
                 }
@@ -185,9 +186,14 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
      * @author Huangzq
      * @date 2022/12/6 19:36
      */
-    private List<Map<String, Object>> query(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int size) {
+    private List<Map<String, Object>> query(List<String> errorSqls,
+                                            JdbcTemplate jdbcTemplate,
+                                            String tableName,
+                                            Set<String> fields,
+                                            long maxId,
+                                            int size) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + maxId + " order by id " + " limit " + size;
+        String sql = "select " + fieldStr + " from "+tableName+" where id > " + maxId + " order by id " + " limit " + size;
 
         try {
             log.info("数据页进度开始：{}", maxId);
@@ -207,12 +213,17 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         return null;
     }
 
-    private List<Map<String, Object>> queryForPage(List<String> errorSqls, JdbcTemplate jdbcTemplate, Set<String> fields, long maxId, int pageSize) {
+    private List<Map<String, Object>> queryForPage(List<String> errorSqls,
+                                                   JdbcTemplate jdbcTemplate,
+                                                   String tableName,
+                                                   Set<String> fields,
+                                                   long maxId,
+                                                   int pageSize) {
         List<Map<String, Object>> res = new ArrayList<>();
         int size = 100000;
         long sum = 0;
         while (true) {
-            List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate, fields, maxId, size);
+            List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate,tableName, fields, maxId, size);
             if (tmps == null) {
                 continue;
             }
@@ -313,7 +324,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
 
     private List<Map<String, Object>> query(Set<String> fields, JdbcTemplate jdbcTemplate, long min, long max) {
         String fieldStr = StringUtils.join(fields, ",");
-        String sql = "select " + fieldStr + " from bird_search_db.ads_qxb_enterprise_search_sort_filter_wide where id > " + min + " and id<= " + max;
+        String sql = "select " + fieldStr + " from tablename where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
     }

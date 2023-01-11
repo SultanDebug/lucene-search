@@ -12,6 +12,7 @@ import org.apache.lucene.search.similarities.BooleanSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -60,7 +61,7 @@ public class ShardIndexLoadService {
      * 地址组成 主路径+分片id+主索引/增量索引名
      */
     public void setFsPath(String fsPath, int shardNum, String fsPathName) {
-        this.fsPath = fsPath + "\\" + shardNum + "\\" + fsPathName;
+        this.fsPath = fsPath + File.separator + shardNum + File.separator + fsPathName;
         this.shardNum = shardNum;
     }
 
@@ -164,10 +165,10 @@ public class ShardIndexLoadService {
         List<Map<String, String>> list = new ArrayList<>();
         long start = System.nanoTime();
 
-        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE,true),new SortField("company_score", SortField.Type.DOUBLE,false));
+        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE,false),
+                new SortField("company_score", SortField.Type.DOUBLE,true));
 
         TopDocs prefixDocs = searcher.search(query1, resultTopN,sort,true,false);
-
 
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
@@ -175,14 +176,11 @@ public class ShardIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs4[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-
             Explanation explain = searcher.explain(query1, scoreDoc.doc);
-
-            log.info("分片【{}】执行计划：{}", shardNum, explain);
-
             Map<String, String> map = new HashMap<>();
             map.put("score", String.valueOf(scoreDoc.score));
             map.put("shard", String.valueOf(shardNum));
+            map.put("explain", explain.toString());
             map.put("type", "待定");
             fieldMap.values().stream()
                     .filter(o -> o.getStored() == 1)
