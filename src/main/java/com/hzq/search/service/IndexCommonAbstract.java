@@ -25,6 +25,7 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public abstract class IndexCommonAbstract {
+
     static final int NO_EXISTS = 0;
     static final int MAIN_INDEX = 1;
     static final int ALIA_INDEX = 2;
@@ -76,11 +77,14 @@ public abstract class IndexCommonAbstract {
         Map<String, FieldDef> fieldMap = indexShardConfig.getFieldMap();
 
         //缓存当前索引，区分是主索引还是别名索引，来回切换
-        Integer currentIndexInfo = CUR_INDEX_MAP.getOrDefault(index,getCurrentIndexInfo(switchIndex));
-        CUR_INDEX_MAP.put(index,currentIndexInfo.equals(MAIN_INDEX)?ALIA_INDEX:MAIN_INDEX);
-
-        String mainPath = currentIndexInfo.equals(MAIN_INDEX) ? aliaPath : fsPath;
-
+        Integer currentIndexInfo = CUR_INDEX_MAP.computeIfAbsent(index,s -> getCurrentIndexInfo(switchIndex));
+        String mainPath = null;
+        if(isInit){
+            CUR_INDEX_MAP.put(index,currentIndexInfo.equals(MAIN_INDEX)?ALIA_INDEX:MAIN_INDEX);
+            mainPath = currentIndexInfo.equals(MAIN_INDEX) ? aliaPath : fsPath;
+        }else{
+            mainPath = currentIndexInfo.equals(MAIN_INDEX) ? fsPath : aliaPath;
+        }
 
         Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> map = new HashMap<>();
         for (int i = 0; i < shardNum; i++) {
@@ -100,7 +104,7 @@ public abstract class IndexCommonAbstract {
 
     public Integer getCurrentIndexInfo(String path) {
         File file = new File(path);
-        int res = 0;
+        int res = NO_EXISTS;
         if (file.exists()) {
             try (
                     FileInputStream fis = new FileInputStream(file);
