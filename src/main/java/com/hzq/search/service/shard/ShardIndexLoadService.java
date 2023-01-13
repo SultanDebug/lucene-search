@@ -101,7 +101,7 @@ public class ShardIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String, String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle) {
+    public List<Map<String, String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle,Integer type) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -114,7 +114,7 @@ public class ShardIndexLoadService {
                 fsSearcher.setSimilarity(new BooleanSimilarity());
             }
 
-            List<Map<String, String>> fsList = this.sugSearch(fsSearcher, fieldMap, query, totle);
+            List<Map<String, String>> fsList = this.sugSearch(fsSearcher, fieldMap, query, totle,type);
 
             return fsList;
         } catch (Exception e) {
@@ -153,12 +153,12 @@ public class ShardIndexLoadService {
      * QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
      */
 
-    private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle) throws Exception {
+    private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle,Integer type) throws Exception {
 //        Query query1 = QueryBuild.fuzzyQuery(query);
 //        Query query1 = QueryBuild.booleanQuery(query);
 //        Query query1 = QueryBuild.sugQuery(searcher,query);
 //        Query query1 = QueryBuild.sugQuery(query);
-        Query query1 = QueryBuild.singleWordQuery(query);
+        Query query1 = type.equals(1) ? QueryBuild.singleWordQuery(query) : QueryBuild.busidQuery(query);
 
         // 返回Top5的结果
         int resultTopN = 10;
@@ -187,8 +187,6 @@ public class ShardIndexLoadService {
                     .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
             list.add(map);
         }
-
-        log.info("分片【" + shardNum + "】召回花费：{}", System.nanoTime() - start);
 
         return list;
 

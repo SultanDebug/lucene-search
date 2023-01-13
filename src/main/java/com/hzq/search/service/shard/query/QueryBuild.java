@@ -86,16 +86,31 @@ public class QueryBuild {
 
     public static Query singleWordQuery(String query){
 
-        BooleanQuery.Builder singleWordQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
         String normalQuery = StringTools.normalWithNotWordStr(query);
-        singleWordQuery.setMinimumNumberShouldMatch((int) Math.round(normalQuery.length()*0.8));
-
-        for (char c : normalQuery.toCharArray()) {
-            TermQuery termQuery = new TermQuery(new Term("single_fuzz_name",String.valueOf(c)));
-            singleWordQuery.add(termQuery, BooleanClause.Occur.SHOULD);
+        int queryLength = normalQuery.length();
+        int minLength = 0;
+        if (queryLength <= 5) {
+            minLength = queryLength;
+        } else if (queryLength <= 8) {
+            minLength = queryLength - 2;
+        } else {
+            minLength = (int) Math.round(normalQuery.length() * 0.8);
         }
 
-        BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
+        nameWordQuery.setMinimumNumberShouldMatch(minLength);
+        userNameWordQuery.setMinimumNumberShouldMatch(minLength);
+
+        for (char c : normalQuery.toCharArray()) {
+            TermQuery termNameQuery = new TermQuery(new Term("single_fuzz_name",String.valueOf(c)));
+            nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
+            TermQuery termUserNameQuery = new TermQuery(new Term("single_fuzz_used_name",String.valueOf(c)));
+            userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        //条件
+        /*BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
 
         BooleanQuery.Builder yearsCondition = new BooleanQuery.Builder();
         yearsCondition.add(IntPoint.newRangeQuery("found_years",1,10), BooleanClause.Occur.SHOULD);
@@ -106,14 +121,29 @@ public class QueryBuild {
         capiCondition.add(DoublePoint.newRangeQuery("reg_capi",900,1000), BooleanClause.Occur.SHOULD);
 
         filterCondition.add(yearsCondition.build(),BooleanClause.Occur.MUST);
-        filterCondition.add(capiCondition.build(),BooleanClause.Occur.MUST);
+        filterCondition.add(capiCondition.build(),BooleanClause.Occur.MUST);*/
 
+        //多字段匹配取最高得分
         BooleanQuery.Builder complexQuery = new BooleanQuery.Builder();
-        complexQuery.add(singleWordQuery.build(), BooleanClause.Occur.MUST);
-        complexQuery.add(filterCondition.build(), BooleanClause.Occur.FILTER);
+        complexQuery.add(nameWordQuery.build(), BooleanClause.Occur.SHOULD);
+        complexQuery.add(userNameWordQuery.build(), BooleanClause.Occur.SHOULD);
 
 
-        return complexQuery.build();
+        List<Query> list = new ArrayList<>();
+        list.add(nameWordQuery.build());
+        list.add(userNameWordQuery.build());
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(list,0);
+
+//        complexQuery.add(filterCondition.build(), BooleanClause.Occur.FILTER);
+
+
+        return queries;
+//        return complexQuery.build();
+    }
+
+
+    public static Query busidQuery(String query){
+        return new TermQuery(new Term("company_id",query));
     }
 
     public static Query booleanQuery(String query){
