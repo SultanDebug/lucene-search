@@ -1,5 +1,6 @@
 package com.hzq.search.service.shard.query;
 
+import com.hzq.search.analyzer.MySingleCharAnalyzer;
 import com.hzq.search.util.StringTools;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
@@ -84,32 +85,44 @@ public class QueryBuild {
         return builder.build();
     }
 
+    /**
+     * 单字符模糊查询
+     *      问题：
+     *          1.英文单字符
+     *          2.瑞浦贸易（上海）有限公司
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2023/1/13 16:48
+     */
     public static Query singleWordQuery(String query){
+        List<String> singleWordToken = getSingleWordToken(query);
 
         BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
         BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
-        String normalQuery = StringTools.normalWithNotWordStr(query);
-        int queryLength = normalQuery.length();
+
+        int queryLength = singleWordToken.size();
         int minLength = 0;
         if (queryLength <= 5) {
             minLength = queryLength;
         } else if (queryLength <= 8) {
             minLength = queryLength - 2;
         } else {
-            minLength = (int) Math.round(normalQuery.length() * 0.8);
+            minLength = (int) Math.round(singleWordToken.size() * 0.8);
         }
 
         nameWordQuery.setMinimumNumberShouldMatch(minLength);
         userNameWordQuery.setMinimumNumberShouldMatch(minLength);
 
-        for (char c : normalQuery.toCharArray()) {
-            TermQuery termNameQuery = new TermQuery(new Term("single_fuzz_name",String.valueOf(c)));
+        for (String token : singleWordToken) {
+            TermQuery termNameQuery = new TermQuery(new Term("single_fuzz_name",token));
             nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
-            TermQuery termUserNameQuery = new TermQuery(new Term("single_fuzz_used_name",String.valueOf(c)));
+            TermQuery termUserNameQuery = new TermQuery(new Term("single_fuzz_used_name",token));
             userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
         }
 
         //条件
+
         /*BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
 
         BooleanQuery.Builder yearsCondition = new BooleanQuery.Builder();
@@ -139,6 +152,24 @@ public class QueryBuild {
 
         return queries;
 //        return complexQuery.build();
+    }
+
+
+    private static List<String> getSingleWordToken(String query){
+        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()){
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = analyzer.tokenStream("",query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+            return res;
+        }catch (Exception e){
+            log.error("模糊查询分词异常：{}",query,e);
+        }
+        return new ArrayList<>();
     }
 
 
