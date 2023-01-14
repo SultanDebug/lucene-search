@@ -87,9 +87,6 @@ public class QueryBuild {
 
     /**
      * 单字符模糊查询
-     *      问题：
-     *          1.英文单字符
-     *          2.瑞浦贸易（上海）有限公司
      * @param
      * @return
      * @author Huangzq
