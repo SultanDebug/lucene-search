@@ -1,6 +1,7 @@
 package com.hzq.search.service.shard;
 
 import com.hzq.search.config.FieldDef;
+import com.hzq.search.enums.QueryTypeEnum;
 import com.hzq.search.service.shard.query.QueryBuild;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -8,7 +9,6 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.BooleanSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -53,6 +53,8 @@ public class ShardIndexLoadService {
      */
     private IndexReader fsReader;
 
+    int resultTopN = 10;
+
     public void setShardNum(int shardNum) {
         this.shardNum = shardNum;
     }
@@ -85,7 +87,7 @@ public class ShardIndexLoadService {
             fsDirectory = FSDirectory.open(Paths.get(fsPath));
             fsReader = DirectoryReader.open(fsDirectory);
             fsSearcher = new IndexSearcher(fsReader);
-            fsSearcher.setSimilarity(new BooleanSimilarity());
+            //fsSearcher.setSimilarity(new BooleanSimilarity());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -101,7 +103,7 @@ public class ShardIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String, String>> search(Map<String, FieldDef> fieldMap, String query, AtomicLong totle,Integer type) {
+    public List<Map<String, String>> shardSearch(Map<String, FieldDef> fieldMap, String query, String filter, AtomicLong totle, String type) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -111,12 +113,9 @@ public class ShardIndexLoadService {
                 fsDirectory = FSDirectory.open(Paths.get(fsPath));
                 fsReader = DirectoryReader.open(fsDirectory);
                 fsSearcher = new IndexSearcher(fsReader);
-                fsSearcher.setSimilarity(new BooleanSimilarity());
+                //fsSearcher.setSimilarity(new BooleanSimilarity());
             }
-
-            List<Map<String, String>> fsList = this.sugSearch(fsSearcher, fieldMap, query, totle,type);
-
-            return fsList;
+            return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type);
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);
         }
@@ -153,22 +152,75 @@ public class ShardIndexLoadService {
      * QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
      */
 
-    private List<Map<String, String>> sugSearch(IndexSearcher searcher, Map<String, FieldDef> fieldMap, String query, AtomicLong totle,Integer type) throws Exception {
+    private List<Map<String, String>> sesarch(IndexSearcher searcher,
+                                              Map<String, FieldDef> fieldMap,
+                                              String query,
+                                              String filter,
+                                              AtomicLong totle,
+                                              String type) throws Exception {
 //        Query query1 = QueryBuild.fuzzyQuery(query);
 //        Query query1 = QueryBuild.booleanQuery(query);
 //        Query query1 = QueryBuild.sugQuery(searcher,query);
 //        Query query1 = QueryBuild.sugQuery(query);
-        Query query1 = type.equals(1) ? QueryBuild.singleWordQuery(query) : QueryBuild.busidQuery(query);
+        Query query1 = null;
+        if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
+            query1 = QueryBuild.singleWordQuery(query);
+        } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
+            query1 = QueryBuild.sugQueryV2(query);
+        } else {
+            query1 = QueryBuild.busidQuery(query);
+        }
 
-        // 返回Top5的结果
-        int resultTopN = 10;
         List<Map<String, String>> list = new ArrayList<>();
-        long start = System.nanoTime();
 
-        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE,false),
-                new SortField("company_score", SortField.Type.DOUBLE,true));
+        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
+                new SortField("company_score", SortField.Type.DOUBLE, true));
 
-        TopDocs prefixDocs = searcher.search(query1, resultTopN,sort,true,false);
+        TopDocs prefixDocs = searcher.search(query1, resultTopN, sort, true, false);
+
+        totle.addAndGet(prefixDocs.totalHits);
+        ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
+        for (int i = 0; i < scoreDocs4.length; i++) {
+            ScoreDoc scoreDoc = scoreDocs4[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            Explanation explain = searcher.explain(query1, scoreDoc.doc);
+            Map<String, String> map = new HashMap<>();
+            map.put("score", String.valueOf(scoreDoc.score));
+            map.put("shard", String.valueOf(shardNum));
+            map.put("explain", explain.toString());
+            map.put("type", "待定");
+            fieldMap.values().stream()
+                    .filter(o -> o.getStored() == 1)
+                    .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
+            list.add(map);
+        }
+
+        return list;
+
+    }
+
+    private List<Map<String, String>> pySesarch(IndexSearcher searcher,
+                                                Map<String, FieldDef> fieldMap,
+                                                String query,
+                                                String filter,
+                                                AtomicLong totle,
+                                                String type) throws Exception {
+        Query query1 = null;
+        if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
+            query1 = QueryBuild.singleWordPyQuery(query);
+        } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
+            query1 = QueryBuild.sugQueryV2(query);
+        } else {
+            query1 = QueryBuild.busidQuery(query);
+        }
+
+        List<Map<String, String>> list = new ArrayList<>();
+
+        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
+                new SortField("company_score", SortField.Type.DOUBLE, true));
+
+        TopDocs prefixDocs = searcher.search(query1, resultTopN, sort, true, false);
 
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;

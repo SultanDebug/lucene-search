@@ -60,7 +60,7 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         term = termAtt.toString();
         if (StringUtils.isNotEmpty(prefix) && term.length() >= minTermLength) {
             while (true) {
-                if(StringUtils.isEmpty(prefix)){
+                if (StringUtils.isEmpty(prefix)) {
                     return false;
                 }
                 char c = prefix.charAt(0);
@@ -78,8 +78,12 @@ public class MyOnlyPinyinTokenFilter extends TokenFilter {
         if (input.incrementToken()) {
             skippedPositions = 0;
             term = termAtt.toString();
-            if(term.length()>1){
+            if (term.length() > 1) {
                 prefix = term;
+            }
+            char c = term.charAt(0);
+            if(c>='a' && c<='z'){
+                prefix="";
             }
             if (term.length() >= minTermLength) {
                 String pinyinTerm = PinyinUtil.termToPinyin(term);

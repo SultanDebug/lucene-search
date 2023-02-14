@@ -29,9 +29,9 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
      * @author Huangzq
      * @date 2022/12/6 19:33
      */
-    public Map<String, Object> search(String index, String query,Integer type) {
-        log.info("分片查询开始：查询类型-{},查询索引-{},搜索词-{}",type, index,query);
-        if (!this.checkIndex(false,index)) {
+    public Map<String, Object> concurrentSearch(String index, String query, String filter, String type) {
+        log.info("分片查询开始：查询类型-{},查询索引-{},搜索词-{}", type, index, query);
+        if (!this.checkIndex(false, index)) {
             log.warn("索引不存在{}", index);
             return null;
         }
@@ -48,7 +48,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
             AtomicLong totle = new AtomicLong(0);
             //String finalQuery = query;
             List<Supplier<List<Map<String, String>>>> list = indexLoadServiceMap.values().stream()
-                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().search(fieldMap, query, totle,type))
+                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().shardSearch(fieldMap, query, filter, totle, type))
                     .collect(Collectors.toList());
 
             List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
@@ -64,9 +64,9 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                             , v -> v.stream().sorted((o1, o2) -> {
                                 Double d1 = Double.parseDouble(o1.get("score"));
                                 Double d2 = Double.parseDouble(o2.get("score"));
-                                if(!d1.equals(d2)){
+                                if (!d1.equals(d2)) {
                                     return d2.compareTo(d1);
-                                }else{
+                                } else {
                                     Double d3 = Double.parseDouble(o1.get("company_score"));
                                     Double d4 = Double.parseDouble(o2.get("company_score"));
                                     return d4.compareTo(d3);
@@ -77,7 +77,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                     .collect(Collectors.toList());
 
             long time = System.currentTimeMillis() - start;
-            log.info("分片查询结束：数量-{},耗时-{},",totle, time);
+            log.info("分片查询结束：数量-{},耗时-{},", totle, time);
             Map<String, Object> map = new HashMap<>();
             map.put("totle", totle);
             map.put("took", time);

@@ -125,7 +125,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
             }
 
             //todo 测试只去100000
-            int pageSize = 10000000;
+            int pageSize = 100000;
             long maxId = 0;
             long count = 0;
             while (true) {
@@ -158,12 +158,12 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 if (tmps.size() < pageSize) {
                     break;
                 }
-                System.gc();
+                // System.gc();
                 log.info("总数据加载进度：{}", count);
                 //todo 测试代码
-                /*if (count >= pageSize) {
+                if (count >= pageSize) {
                     break;
-                }*/
+                }
             }
 
 
@@ -225,6 +225,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
 
     /**
      * 分批加载
+     *
      * @param
      * @return
      * @author Huangzq

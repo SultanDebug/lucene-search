@@ -82,9 +82,11 @@ public class ShardController {
     }
 
     @GetMapping(value = "/shard/query")
-    public ResultResponse<Map<String, Object>> query(@RequestParam("index") String index, @RequestParam("query") String query) {
-
-        Map<String, Object> name = shardIndexMergeLoadService.search(index, query);
+    public ResultResponse<Map<String, Object>> query(@RequestParam("index") String index,
+                                                     @RequestParam("query") String query,
+                                                     @RequestParam(name = "filter", defaultValue = "") String filter,
+                                                     @RequestParam(name = "type", defaultValue = "fuzzy") String type) {
+        Map<String, Object> name = shardIndexMergeLoadService.concurrentSearch(index, query, filter, type);
         return ResultResponse.success(name);
     }
 

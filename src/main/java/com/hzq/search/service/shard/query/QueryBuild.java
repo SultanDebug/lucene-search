@@ -1,7 +1,8 @@
 package com.hzq.search.service.shard.query;
 
+import com.hzq.search.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.search.analyzer.MySingleCharAnalyzer;
-import com.hzq.search.util.StringTools;
+import com.hzq.search.util.PinyinUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
@@ -10,8 +11,6 @@ import org.apache.lucene.analysis.core.WhitespaceAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
-import org.apache.lucene.document.DoublePoint;
-import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
@@ -31,7 +30,18 @@ public class QueryBuild {
     /**
      * name,used_name,product_brand_names,brand_names_algo,app_name,stock_name_short_array,stock_code_new_array,oper_name,credit_no
      */
-    public static Query sugQuery(IndexSearcher searcher,String query) {
+    /**
+     * Description:
+     * 建议词第一版
+     * 逻辑：字段精确term查询、前缀查询以及短语查询
+     * 问题：纯粹查询，无法区分哪个字段命中
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2023/1/16 17:29
+     */
+    public static Query sugQueryV1(IndexSearcher searcher, String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
         builder.add(chinessQuery("name", query), BooleanClause.Occur.SHOULD);
@@ -50,49 +60,65 @@ public class QueryBuild {
         return builder.build();
     }
 
-    public static Query sugQuery(String query){
+    /**
+     * Description:
+     * 建议词第二版
+     * 逻辑：精确term查询和前缀查询，用布尔相关性配合加权查询及劝最大查询，区分字段命中信息
+     * 问题：相关性排序无保障
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2023/1/16 17:30
+     */
+    public static Query sugQueryV2(String query) {
         List<Query> cos = new ArrayList<>();
 
-        cos.add(new BoostQuery(new PrefixQuery(new Term("fuzz_name", query)),20));
+        cos.add(new BoostQuery(new PrefixQuery(new Term("fuzz_name", query)), 20));
         Query nameQuery = allTermsAndQuery("name", query);
         if (nameQuery != null) {
-            cos.add(new BoostQuery(nameQuery,19));
+            cos.add(new BoostQuery(nameQuery, 19));
         }
 
-        cos.add(new BoostQuery(new PrefixQuery(new Term("fuzz_used_name", query)),18));
+        cos.add(new BoostQuery(new PrefixQuery(new Term("fuzz_used_name", query)), 18));
         Query usedNameQuery = allTermsAndQuery("used_name", query);
         if (usedNameQuery != null) {
-            cos.add(new BoostQuery(usedNameQuery,17));
+            cos.add(new BoostQuery(usedNameQuery, 17));
         }
 
-        cos.add(new BoostQuery(termPreBoostQuery("oper_name_one", query),16));
-        cos.add(new BoostQuery(termPreBoostQuery("jianpin", query),14));
-        cos.add(new BoostQuery(termPreBoostQuery("pinyin", query),12));
-        cos.add(new BoostQuery(termPreBoostQuery("credit_no", query),1));
+        cos.add(new BoostQuery(termPreBoostQuery("oper_name_one", query), 16));
+        cos.add(new BoostQuery(termPreBoostQuery("jianpin", query), 14));
+        cos.add(new BoostQuery(termPreBoostQuery("pinyin", query), 12));
+        cos.add(new BoostQuery(termPreBoostQuery("credit_no", query), 1));
 
-        cos.add(new BoostQuery(new TermQuery(new Term("product_brand_names", query)),10));
-        cos.add(new BoostQuery(new TermQuery(new Term("brand_names_algo", query)),2));
-        cos.add(new BoostQuery(new TermQuery(new Term("app_name", query)),4));
-        cos.add(new BoostQuery(new TermQuery(new Term("stock_name_short_array", query)),6));
-        cos.add(new BoostQuery(new TermQuery(new Term("stock_code_new_array", query)),8));
+        cos.add(new BoostQuery(new TermQuery(new Term("product_brand_names", query)), 10));
+        cos.add(new BoostQuery(new TermQuery(new Term("brand_names_algo", query)), 2));
+        cos.add(new BoostQuery(new TermQuery(new Term("app_name", query)), 4));
+        cos.add(new BoostQuery(new TermQuery(new Term("stock_name_short_array", query)), 6));
+        cos.add(new BoostQuery(new TermQuery(new Term("stock_code_new_array", query)), 8));
 
-        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos,0);
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos, 0);
 
-        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        /*BooleanQuery.Builder builder = new BooleanQuery.Builder();
         builder.add(queries, BooleanClause.Occur.MUST);
-        builder.add(IntPoint.newRangeQuery("found_years",1,3), BooleanClause.Occur.MUST);
+        builder.add(IntPoint.newRangeQuery("found_years",1,3), BooleanClause.Occur.FILTER);*/
 
-        return builder.build();
+        return queries;
     }
 
     /**
      * 单字符模糊查询
+     * 问题：
+     * 1.英文单字符
+     * 2.瑞浦贸易（上海）有限公司
+     * 3.江苏司生建设有限公司 单字重复
+     *
      * @param
      * @return
      * @author Huangzq
      * @date 2023/1/13 16:48
      */
-    public static Query singleWordQuery(String query){
+    public static Query singleWordQuery(String query) {
         List<String> singleWordToken = getSingleWordToken(query);
 
         BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
@@ -112,9 +138,9 @@ public class QueryBuild {
         userNameWordQuery.setMinimumNumberShouldMatch(minLength);
 
         for (String token : singleWordToken) {
-            TermQuery termNameQuery = new TermQuery(new Term("single_fuzz_name",token));
+            TermQuery termNameQuery = new TermQuery(new Term("single_fuzz_name", token));
             nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
-            TermQuery termUserNameQuery = new TermQuery(new Term("single_fuzz_used_name",token));
+            TermQuery termUserNameQuery = new TermQuery(new Term("single_fuzz_used_name", token));
             userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
         }
 
@@ -142,7 +168,7 @@ public class QueryBuild {
         List<Query> list = new ArrayList<>();
         list.add(nameWordQuery.build());
         list.add(userNameWordQuery.build());
-        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(list,0);
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(list, 0);
 
 //        complexQuery.add(filterCondition.build(), BooleanClause.Occur.FILTER);
 
@@ -152,10 +178,70 @@ public class QueryBuild {
     }
 
 
-    private static List<String> getSingleWordToken(String query){
-        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()){
+    public static Query singleWordPyQuery(String query) {
+        List<String> singleWordToken = getSingleWordPyToken(query);
+
+        BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
+
+        int queryLength = singleWordToken.size();
+        int minLength = 0;
+        if (queryLength <= 5) {
+            minLength = queryLength;
+        } else if (queryLength <= 8) {
+            minLength = queryLength - 2;
+        } else {
+            minLength = (int) Math.round(singleWordToken.size() * 0.8);
+        }
+
+        nameWordQuery.setMinimumNumberShouldMatch(minLength);
+        userNameWordQuery.setMinimumNumberShouldMatch(minLength);
+
+        for (String token : singleWordToken) {
+            TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
+            nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
+            TermQuery termUserNameQuery = new TermQuery(new Term("used_name_pinyin", token));
+            userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        //条件
+
+        /*BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
+
+        BooleanQuery.Builder yearsCondition = new BooleanQuery.Builder();
+        yearsCondition.add(IntPoint.newRangeQuery("found_years",1,10), BooleanClause.Occur.SHOULD);
+        yearsCondition.add(IntPoint.newRangeQuery("found_years",15,20), BooleanClause.Occur.SHOULD);
+
+        BooleanQuery.Builder capiCondition = new BooleanQuery.Builder();
+        capiCondition.add(DoublePoint.newRangeQuery("reg_capi",0,30), BooleanClause.Occur.SHOULD);
+        capiCondition.add(DoublePoint.newRangeQuery("reg_capi",900,1000), BooleanClause.Occur.SHOULD);
+
+        filterCondition.add(yearsCondition.build(),BooleanClause.Occur.MUST);
+        filterCondition.add(capiCondition.build(),BooleanClause.Occur.MUST);*/
+
+        //多字段匹配取最高得分
+        BooleanQuery.Builder complexQuery = new BooleanQuery.Builder();
+        complexQuery.add(nameWordQuery.build(), BooleanClause.Occur.SHOULD);
+        complexQuery.add(userNameWordQuery.build(), BooleanClause.Occur.SHOULD);
+
+
+        List<Query> list = new ArrayList<>();
+        list.add(nameWordQuery.build());
+        list.add(userNameWordQuery.build());
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(list, 0);
+
+//        complexQuery.add(filterCondition.build(), BooleanClause.Occur.FILTER);
+
+
+        return queries;
+//        return complexQuery.build();
+    }
+
+
+    private static List<String> getSingleWordToken(String query) {
+        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()) {
             List<String> res = new ArrayList<>();
-            TokenStream tokenStream = analyzer.tokenStream("",query);
+            TokenStream tokenStream = analyzer.tokenStream("", query);
             CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
             tokenStream.reset();//必须
             while (tokenStream.incrementToken()) {
@@ -163,46 +249,62 @@ public class QueryBuild {
             }
             tokenStream.close();//必须
             return res;
-        }catch (Exception e){
-            log.error("模糊查询分词异常：{}",query,e);
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
+        }
+        return new ArrayList<>();
+    }
+
+    private static List<String> getSingleWordPyToken(String query) {
+        try (MyOnlyPinyinAnalyzer analyzer = new MyOnlyPinyinAnalyzer(true)) {
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = analyzer.tokenStream("", query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(PinyinUtil.termToPinyin(termAtt.toString()));
+            }
+            tokenStream.close();//必须
+            return res;
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
         }
         return new ArrayList<>();
     }
 
 
-    public static Query busidQuery(String query){
-        return new TermQuery(new Term("company_id",query));
+    public static Query busidQuery(String query) {
+        return new TermQuery(new Term("company_id", query));
     }
 
-    public static Query booleanQuery(String query){
+    public static Query booleanQuery(String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
 
-        BoostQuery boostQuery1 = new BoostQuery(termPreQuery("fuzz_name", query),30);
-        BoostQuery boostQuery2 = new BoostQuery(termPreQuery("fuzz_used_name", query),50);
-        builder.add(boostQuery1,BooleanClause.Occur.SHOULD);
-        builder.add(boostQuery2,BooleanClause.Occur.SHOULD);
+        BoostQuery boostQuery1 = new BoostQuery(termPreQuery("fuzz_name", query), 30);
+        BoostQuery boostQuery2 = new BoostQuery(termPreQuery("fuzz_used_name", query), 50);
+        builder.add(boostQuery1, BooleanClause.Occur.SHOULD);
+        builder.add(boostQuery2, BooleanClause.Occur.SHOULD);
 
         List<Query> cos = new ArrayList<>();
         cos.add(boostQuery1);
         cos.add(boostQuery2);
-        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos,0);
-
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos, 0);
 
 
         return queries;
 //        return builder.build();
     }
 
-    public static Query fuzzyQuery(String query){
+    public static Query fuzzyQuery(String query) {
         BooleanQuery.Builder builder = new BooleanQuery.Builder();
         Query nameQuery = termPreQuery("fuzz_name", query);
         Query usedNameQuery = termPreQuery("fuzz_used_name", query);
-        FuzzyQuery fuzNameQuery = new FuzzyQuery(new Term("fuzz_name",query),2,3,50,false);
-        FuzzyQuery fuzUsedNameQuery = new FuzzyQuery(new Term("fuzz_used_name",query),2,3,50,true);
-        builder.add(nameQuery,BooleanClause.Occur.SHOULD);
-        builder.add(usedNameQuery,BooleanClause.Occur.SHOULD);
-        builder.add(fuzNameQuery,BooleanClause.Occur.SHOULD);
-        builder.add(fuzUsedNameQuery,BooleanClause.Occur.SHOULD);
+        FuzzyQuery fuzNameQuery = new FuzzyQuery(new Term("fuzz_name", query), 2, 3, 50, false);
+        FuzzyQuery fuzUsedNameQuery = new FuzzyQuery(new Term("fuzz_used_name", query), 2, 3, 50, true);
+        builder.add(nameQuery, BooleanClause.Occur.SHOULD);
+        builder.add(usedNameQuery, BooleanClause.Occur.SHOULD);
+        builder.add(fuzNameQuery, BooleanClause.Occur.SHOULD);
+        builder.add(fuzUsedNameQuery, BooleanClause.Occur.SHOULD);
         return builder.build();
     }
 
@@ -222,13 +324,13 @@ public class QueryBuild {
 
     public static Query textBoostQuery(String fieldId, String query) {
         List<Query> cos = new ArrayList<>();
-        cos.add(new BoostQuery(new PrefixQuery(new Term(fieldId, query)),2));
-        cos.add(new BoostQuery(new TermQuery(new Term(fieldId, query)),3));
+        cos.add(new BoostQuery(new PrefixQuery(new Term(fieldId, query)), 2));
+        cos.add(new BoostQuery(new TermQuery(new Term(fieldId, query)), 3));
         Query booleanQuery = allTermsAndQuery(fieldId, query);
         if (booleanQuery != null) {
-            cos.add(new BoostQuery(booleanQuery,1));
+            cos.add(new BoostQuery(booleanQuery, 1));
         }
-        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos,0);
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos, 0);
         return queries;
     }
 
@@ -243,13 +345,13 @@ public class QueryBuild {
 
     public static Query termPreBoostQuery(String fieldId, String query) {
 
-        BoostQuery query1 = new BoostQuery(new PrefixQuery(new Term(fieldId, query)),1);
-        BoostQuery query2 = new BoostQuery(new TermQuery(new Term(fieldId, query)),2);
+        BoostQuery query1 = new BoostQuery(new PrefixQuery(new Term(fieldId, query)), 1);
+        BoostQuery query2 = new BoostQuery(new TermQuery(new Term(fieldId, query)), 2);
 
         List<Query> cos = new ArrayList<>();
         cos.add(query1);
         cos.add(query2);
-        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos,0);
+        DisjunctionMaxQuery queries = new DisjunctionMaxQuery(cos, 0);
 
         return queries;
 
@@ -278,7 +380,7 @@ public class QueryBuild {
             tokenStream.close();//必须
 
 
-            QueryParser queryParser = new QueryParser(fieldId,new WhitespaceAnalyzer());
+            QueryParser queryParser = new QueryParser(fieldId, new WhitespaceAnalyzer());
             queryParser.setDefaultOperator(QueryParser.Operator.AND);
             StringBuilder q = new StringBuilder();
             for (Pair<String, Integer> term : terms) {

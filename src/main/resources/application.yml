@@ -22,20 +22,48 @@ configs:
           fieldType: 1
           stored: 1
           dbFieldFlag: 1
-        pinyin:
-          fieldName: pinyin
+        all_name_pinyin:
+          fieldName: all_name_pinyin
           analyzerType: 4
           fieldType: 1
           stored: 0
           dbFieldFlag: 0
           parentField: name
-        jianpin:
-          fieldName: jianpin
+        all_used_name_pinyin:
+          fieldName: all_used_name_pinyin
+          analyzerType: 4
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        name_pinyin:
+          fieldName: name_pinyin
+          analyzerType: 2
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        used_name_pinyin:
+          fieldName: used_name_pinyin
+          analyzerType: 2
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: used_name
+        name_jianpin:
+          fieldName: name_jianpin
           analyzerType: 3
           fieldType: 1
           stored: 0
           dbFieldFlag: 0
           parentField: name
+        used_name_jianpin:
+          fieldName: used_name_jianpin
+          analyzerType: 3
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: used_name
         name:
           fieldName: name
           analyzerType: 1
@@ -159,5 +187,71 @@ configs:
           fieldName: reg_capi
           analyzerType: 1
           fieldType: 4
+          stored: 1
+          dbFieldFlag: 1
+        social_security_num:
+          fieldName: social_security_num
+          analyzerType: 1
+          fieldType: 3
+          stored: 1
+          dbFieldFlag: 1
+        type_new:
+          fieldName: type_new
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        category_new:
+          fieldName: category_new
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        status:
+          fieldName: status
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        address_code_prov:
+          fieldName: address_code_prov
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        address_code_city:
+          fieldName: address_code_city
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        address_code_dist:
+          fieldName: address_code_dist
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        industry_code_1:
+          fieldName: industry_code_1
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        industry_code_2:
+          fieldName: industry_code_2
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        industry_code_3:
+          fieldName: industry_code_3
+          analyzerType: 6
+          fieldType: 1
+          stored: 1
+          dbFieldFlag: 1
+        industry_code_4:
+          fieldName: industry_code_4
+          analyzerType: 6
+          fieldType: 1
           stored: 1
           dbFieldFlag: 1
