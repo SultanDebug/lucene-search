@@ -326,7 +326,7 @@ public class ShardIndexService {
                     break;
                 case 2:
                     // 拼音字段使用标准分词器
-                    analyzer = new MyOnlyPinyinAnalyzer(true);
+                    analyzer = new MyCnPinyinAnalyzer(true);
                     break;
                 case 3:
                     // 简拼字段使用标准分词器

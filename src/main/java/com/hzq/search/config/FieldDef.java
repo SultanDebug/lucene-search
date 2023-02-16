@@ -24,11 +24,11 @@ public class FieldDef {
      */
     private int analyzerType;
     /**
-     * 1-分词字段  2-不分词 3-int范围字段 4-double范围字段
+     * 1-分词字段【过滤字段】  2-不分词 3-int范围字段 4-double范围字段
      */
     private int fieldType;
     /**
-     * 特殊符号分词
+     * 特殊符号分词【analyzerType 分词类型必须是5】
      */
     private char specialChar;
     /**
@@ -36,11 +36,11 @@ public class FieldDef {
      */
     private int stored;
     /**
-     * 0-否  1-是 ：标记字段是否是衍生字段或者说是否属于宽表字段
+     * 0-否  1-是 ，标记字段是否是衍生字段，是否属于宽表字段
      */
     private int dbFieldFlag;
     /**
-     * 衍生字段父字段
+     * 衍生字段父字段【dbFieldFlag 需为 0】
      */
     private String parentField;
 }

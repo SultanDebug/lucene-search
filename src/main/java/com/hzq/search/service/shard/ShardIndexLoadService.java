@@ -116,7 +116,7 @@ public class ShardIndexLoadService {
                 fsSearcher = new IndexSearcher(fsReader);
                 fsSearcher.setSimilarity(new BooleanSimilarity());
             }
-            return this.sesarch(fsSearcher, fieldMap, query, filter, totle, type);
+            return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type);
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);
         }

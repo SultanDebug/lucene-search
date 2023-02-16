@@ -3,6 +3,7 @@ package com.hzq.search.service.shard.query;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
 import com.hzq.search.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.search.analyzer.MySingleCharAnalyzer;
 import com.hzq.search.config.FieldDef;
@@ -335,13 +336,13 @@ public class QueryBuild {
      * @date 2023/2/14 16:45
      */
     private static List<String> getSingleWordPyToken(String query) {
-        try (MyOnlyPinyinAnalyzer analyzer = new MyOnlyPinyinAnalyzer(true)) {
+        try (MyCnPinyinAnalyzer analyzer = new MyCnPinyinAnalyzer(true)) {
             List<String> res = new ArrayList<>();
             TokenStream tokenStream = analyzer.tokenStream("", query);
             CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
             tokenStream.reset();//必须
             while (tokenStream.incrementToken()) {
-                res.add(PinyinUtil.termToPinyin(termAtt.toString()));
+                res.add(termAtt.toString());
             }
             tokenStream.close();//必须
             return res;
