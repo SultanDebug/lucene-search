@@ -7,25 +7,28 @@ package com.hzq.search.enums;
  */
 public enum QueryTypeEnum {
     /**
-     * 详情查询
-     * */
-    DETAIL_BY_COMPANY_ID("detail","详情查询"),
+     * id详情查询
+     */
+    DETAIL_BY_COMPANY_ID("detail", "id详情查询"),
     /**
      * 精确查询
-     * */
-    PREFIX_QUERY("prefix","精确查询"),
+     */
+    PREFIX_QUERY("prefix", "精确查询"),
     /**
      * 模糊查询
-     * */
-    FUZZY_QUERY("fuzzy","模糊查询")
-    ;
+     */
+    FUZZY_QUERY("fuzzy", "模糊查询"),
+    /**
+     * 复合查询
+     */
+    COMPLEX_QUERY("complex", "复合查询");
     /**
      * 查询类型
-     * */
+     */
     private String type;
     /**
      * 类型描述
-     * */
+     */
     private String desc;
 
     QueryTypeEnum(String type, String desc) {

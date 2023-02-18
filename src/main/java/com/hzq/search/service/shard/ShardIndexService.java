@@ -352,6 +352,10 @@ public class ShardIndexService {
                     // 单字归一化分词器
                     analyzer = new MySingleCharAnalyzer();
                     break;
+                case 9:
+                    // 单字拼音分词
+                    analyzer = new MySingleCharPyAnalyzer();
+                    break;
                 default:
                     // 默认使用ik归一化分词器
                     analyzer = new MyIkAnalyzer(false);

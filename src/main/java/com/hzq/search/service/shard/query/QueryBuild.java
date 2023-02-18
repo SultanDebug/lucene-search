@@ -4,7 +4,6 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
-import com.hzq.search.analyzer.MyOnlyPinyinAnalyzer;
 import com.hzq.search.analyzer.MySingleCharAnalyzer;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.enums.FieldTypeEnum;
@@ -228,6 +227,77 @@ public class QueryBuild {
         }
     }
 
+
+    /**
+     * 拼音模糊复合查询
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2023/2/14 16:46
+     */
+    public static Query singleWordComplexQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
+        List<String> singleWordToken = getSingleWordComplexToken(query);
+
+        BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
+        int queryLength = singleWordToken.size();
+        int minLength = 0;
+        if (queryLength <= 5) {
+            minLength = queryLength;
+        } else {
+            minLength = queryLength - 1;
+        }
+        nameWordQuery.setMinimumNumberShouldMatch(minLength);
+        userNameWordQuery.setMinimumNumberShouldMatch(minLength);
+
+        PhraseQuery.Builder namePhs = new PhraseQuery.Builder();
+        PhraseQuery.Builder usedNamePhs = new PhraseQuery.Builder();
+        namePhs.setSlop(2);
+        usedNamePhs.setSlop(2);
+        int pos = 1;
+        for (String token : singleWordToken) {
+            String py = PinyinUtil.termToPinyin(token);
+            namePhs.add(new Term("name_single_pinyin", py), pos);
+            usedNamePhs.add(new Term("used_name_single_pinyin", py), pos);
+            pos++;
+
+
+            TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
+            nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
+            TermQuery termUserNameQuery = new TermQuery(new Term("used_name_pinyin", token));
+            userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        //条件过滤
+        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
+
+        //多字段匹配取最高得分
+        List<Query> pyList = new ArrayList<>();
+        pyList.add(namePhs.build());
+        pyList.add(usedNamePhs.build());
+        DisjunctionMaxQuery pyQueries = new DisjunctionMaxQuery(pyList, 0);
+
+        List<Query> termList = new ArrayList<>();
+        termList.add(nameWordQuery.build());
+        termList.add(userNameWordQuery.build());
+        DisjunctionMaxQuery complexQueries = new DisjunctionMaxQuery(termList, 0);
+
+        List<Query> complexList = new ArrayList<>();
+        complexList.add(pyQueries);
+        complexList.add(complexQueries);
+        DisjunctionMaxQuery complex = new DisjunctionMaxQuery(complexList, 0);
+
+        if (conditionFilter == null) {
+            return complex;
+        } else {
+            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
+            finalQuery.add(complex, BooleanClause.Occur.MUST);
+            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
+            return finalQuery.build();
+        }
+    }
+
     public static Query filterHandler(String filter, Map<String, FieldDef> fieldMap) {
         BooleanQuery.Builder filterCondition = new BooleanQuery.Builder();
 
@@ -337,6 +407,31 @@ public class QueryBuild {
      */
     private static List<String> getSingleWordPyToken(String query) {
         try (MyCnPinyinAnalyzer analyzer = new MyCnPinyinAnalyzer(true)) {
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = analyzer.tokenStream("", query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+            return res;
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
+        }
+        return new ArrayList<>();
+    }
+
+    /**
+     * 拼音分词结果
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2023/2/14 16:45
+     */
+    private static List<String> getSingleWordComplexToken(String query) {
+        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()) {
             List<String> res = new ArrayList<>();
             TokenStream tokenStream = analyzer.tokenStream("", query);
             CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);

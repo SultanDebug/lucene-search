@@ -1,6 +1,6 @@
 package com.hzq.search.controller;
 
-import com.hzq.search.analyzer.MyOnlyPinyinAnalyzer;
+import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
 import com.hzq.search.service.ResultResponse;
 import com.hzq.search.service.ShardIndexMergeLoadService;
 import com.hzq.search.service.ShardIndexMergeService;
@@ -49,7 +49,7 @@ public class ShardController {
 
     @GetMapping(value = "/shard/py-analyzer")
     public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart, @RequestParam("query") String query) throws Exception {
-        MyOnlyPinyinAnalyzer ikAnalyzer = new MyOnlyPinyinAnalyzer(smart);
+        MyCnPinyinAnalyzer ikAnalyzer = new MyCnPinyinAnalyzer(smart);
         TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
         CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
         OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
@@ -93,8 +93,8 @@ public class ShardController {
 
     @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create(@RequestParam("index") String index) {
-        shardIndexMergeService.initShardIndexForPage(index);
-        return ResultResponse.success();
+        List<String> list = shardIndexMergeService.initShardIndexForPage(index);
+        return ResultResponse.success(list);
     }
 
     @PostMapping(value = "/shard/add/{index}")

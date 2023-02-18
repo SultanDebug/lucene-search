@@ -21,7 +21,9 @@ public class MyCnPinyinTokenFilter extends TokenFilter {
     private PositionIncrementAttribute posIncrAtt;
 
     private OffsetAttribute offsetAtt = addAttribute(OffsetAttribute.class);
-    //private int skippedPositions;
+    private int start = 0;
+    private int skippedPositions = 0;
+    private int pos = 1;
     private String term;
     /**
      * Term最小长度，小于这个长度的不进行拼音转换
@@ -31,6 +33,7 @@ public class MyCnPinyinTokenFilter extends TokenFilter {
     private String pyTerm;
 
     private String cnTerm;
+    private boolean singleFlag = true;
     private static final int DEFAULT_MIN_TERM_LENGTH = 1;
 
     protected MyCnPinyinTokenFilter(TokenStream input, int minTermLength) {
@@ -46,26 +49,38 @@ public class MyCnPinyinTokenFilter extends TokenFilter {
     @Override
     public boolean incrementToken() throws IOException {
         term = termAtt.toString();
-        if(StringUtils.isNotEmpty(cnTerm)){
-            if (cnTerm.length() > 1) {
-                pyTerm = cnTerm;
-            }
-            char c = cnTerm.charAt(0);
-            if(c>='a' && c<='z'){
-                pyTerm ="";
-            }
+        if (StringUtils.isNotEmpty(cnTerm)) {
+
             String pinyinTerm = PinyinUtil.termToPinyin(cnTerm);
             termAtt.copyBuffer(pinyinTerm.toCharArray(), 0, pinyinTerm.length());
-            posIncrAtt.setPositionIncrement(1);
-            cnTerm="";
+            posIncrAtt.setPositionIncrement(pos);
+            skippedPositions = 0;
+            start = offsetAtt.startOffset();
+            if (cnTerm.length() > 1) {
+                pyTerm = cnTerm;
+            } else {
+                pos++;
+            }
+            cnTerm = "";
             return true;
         }
-        if (StringUtils.isNotEmpty(pyTerm) && term.length() >= minTermLength) {
+        if (StringUtils.isNotEmpty(pyTerm) && pyTerm.length() >= minTermLength) {
             while (true) {
                 if (StringUtils.isEmpty(pyTerm)) {
                     return false;
                 }
                 char c = pyTerm.charAt(0);
+                if (singleFlag) {
+                    termAtt.setEmpty();
+                    termAtt.append(c);
+                    posIncrAtt.setPositionIncrement(pos);
+                    int startTmp = start + skippedPositions;
+                    offsetAtt.setOffset(startTmp, startTmp + 1);
+                    skippedPositions++;
+                    pos++;
+                    singleFlag = false;
+                    return true;
+                }
                 pyTerm = pyTerm.substring(1);
                 String pinyinTerm = PinyinUtil.termToPinyin(String.valueOf(c));
                 if (StringUtils.isEmpty(pinyinTerm)) {
@@ -73,25 +88,34 @@ public class MyCnPinyinTokenFilter extends TokenFilter {
                 }
                 termAtt.setEmpty();
                 termAtt.append(pinyinTerm);
-                posIncrAtt.setPositionIncrement(1);
+                //posIncrAtt.setPositionIncrement(pos);
+                singleFlag = true;
                 return true;
             }
         }
         if (input.incrementToken()) {
             term = termAtt.toString();
             cnTerm = term;
-            char c = term.charAt(0);
-            if(c>='a' && c<='z'){
-                cnTerm ="";
-            }
             if (term.length() >= minTermLength) {
                 termAtt.copyBuffer(term.toCharArray(), 0, term.length());
-                posIncrAtt.setPositionIncrement(1);
+                posIncrAtt.setPositionIncrement(pos);
+                char c = term.charAt(0);
+                //英文、拼音词项阻断
+                if (c >= 'a' && c <= 'z') {
+                    pos++;
+                    cnTerm = "";
+                }
                 return true;
             }
             return true;
         } else {
             return false;
         }
+    }
+
+    @Override
+    public void reset() throws IOException {
+        super.reset();
+        pos = 1;
     }
 }

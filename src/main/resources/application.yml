@@ -51,6 +51,20 @@ configs:
           stored: 0
           dbFieldFlag: 0
           parentField: used_name
+        name_single_pinyin:
+          fieldName: name_single_pinyin
+          analyzerType: 9
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name
+        used_name_single_pinyin:
+          fieldName: used_name_single_pinyin
+          analyzerType: 9
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: used_name
         name_jianpin:
           fieldName: name_jianpin
           analyzerType: 3

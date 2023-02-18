@@ -17,18 +17,18 @@ import java.io.StringReader;
  * @author Huangzq
  * @date 2022/11/22 10:56
  */
-public class MySingleCharAnalyzer extends Analyzer {
+public class MySingleCharPyAnalyzer extends Analyzer {
     @Override
     protected TokenStreamComponents createComponents(String s) {
 //        MySingleCharTokenizer tokenizer = new MySingleCharTokenizer();
         StandardTokenizer tokenizer = new StandardTokenizer();
-        MySingleCharTokenFilter filter = new MySingleCharTokenFilter(tokenizer);
+        MySingleCharPyTokenFilter filter = new MySingleCharPyTokenFilter(tokenizer);
         return new TokenStreamComponents(tokenizer, filter);
     }
 
     public static void main(String[] args) throws IOException {
-        MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer();
-        String arr[] = {"我是长沙ren"};
+        MySingleCharPyAnalyzer analyzer = new MySingleCharPyAnalyzer();
+        String arr[] = {"中国邮政速递物流股份有限公司内蒙古自治区满洲里分公司商贸中心营业部", "内蒙古京新药业有限公司"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));
@@ -46,7 +46,7 @@ public class MySingleCharAnalyzer extends Analyzer {
 
 
         StandardAnalyzer analyzer1 = new StandardAnalyzer();
-        String arr1[] = {"鬼 地方个aBC%*測試", "我是长沙ren"};
+        String arr1[] = {"鬼 地方个aBC%*測試"};
 
         for (int i = 0; i < arr1.length; i++) {
             TokenStream tokenStream = analyzer1.tokenStream("hzq", new StringReader(arr1[i]));

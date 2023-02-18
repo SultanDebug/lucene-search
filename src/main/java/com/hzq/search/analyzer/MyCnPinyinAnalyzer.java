@@ -3,6 +3,7 @@ package com.hzq.search.analyzer;
 import org.apache.lucene.analysis.Analyzer;
 import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.Tokenizer;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
 import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
@@ -13,11 +14,11 @@ import java.io.StringReader;
 
 /**
  * 不带中文词项的拼音分词器
+ *
  * @author Huangzq
  * @date 2022/11/22 10:56
  */
 public class MyCnPinyinAnalyzer extends Analyzer {
-
     private boolean useSmart;
 
     public MyCnPinyinAnalyzer(boolean useSmart) {
@@ -33,8 +34,8 @@ public class MyCnPinyinAnalyzer extends Analyzer {
     }
 
     public static void main(String[] args) throws IOException {
-        MyCnPinyinAnalyzer analyzer = new MyCnPinyinAnalyzer(true);
-        String arr[] = {"维正知识产权科技有限公司","qingdao tong","qingdao人"};
+        StandardAnalyzer analyzer = new StandardAnalyzer();
+        String arr[] = {"内蒙古京新药业有限公司", "我是长沙ren", "西安话为技术有限公司", "qingdao tong", "qingdao人"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

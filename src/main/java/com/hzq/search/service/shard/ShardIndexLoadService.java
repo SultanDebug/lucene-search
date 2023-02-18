@@ -9,7 +9,6 @@ import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
 import org.apache.lucene.search.*;
-import org.apache.lucene.search.similarities.BooleanSimilarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
 
@@ -88,7 +87,7 @@ public class ShardIndexLoadService {
             fsDirectory = FSDirectory.open(Paths.get(fsPath));
             fsReader = DirectoryReader.open(fsDirectory);
             fsSearcher = new IndexSearcher(fsReader);
-            fsSearcher.setSimilarity(new BooleanSimilarity());
+            //fsSearcher.setSimilarity(new BooleanSimilarity());
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -114,7 +113,7 @@ public class ShardIndexLoadService {
                 fsDirectory = FSDirectory.open(Paths.get(fsPath));
                 fsReader = DirectoryReader.open(fsDirectory);
                 fsSearcher = new IndexSearcher(fsReader);
-                fsSearcher.setSimilarity(new BooleanSimilarity());
+                //fsSearcher.setSimilarity(new BooleanSimilarity());
             }
             return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type);
         } catch (Exception e) {
@@ -165,7 +164,9 @@ public class ShardIndexLoadService {
 //        Query query1 = QueryBuild.sugQuery(query);
         Query query1 = null;
         if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
-            query1 = QueryBuild.singleWordQuery(query, filter, fieldMap);
+            query1 = QueryBuild.singleWordPyQuery(query, filter, fieldMap);
+        } else if (type.equals(QueryTypeEnum.COMPLEX_QUERY.getType())) {
+            query1 = QueryBuild.singleWordComplexQuery(query, filter, fieldMap);
         } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
             query1 = QueryBuild.sugQueryV2(query);
         } else {
@@ -210,6 +211,8 @@ public class ShardIndexLoadService {
         Query query1 = null;
         if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
             query1 = QueryBuild.singleWordPyQuery(query, filter, fieldMap);
+        } else if (type.equals(QueryTypeEnum.COMPLEX_QUERY.getType())) {
+            query1 = QueryBuild.singleWordComplexQuery(query, filter, fieldMap);
         } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
             query1 = QueryBuild.sugQueryV2(query);
         } else {
@@ -242,6 +245,5 @@ public class ShardIndexLoadService {
         }
 
         return list;
-
     }
 }
