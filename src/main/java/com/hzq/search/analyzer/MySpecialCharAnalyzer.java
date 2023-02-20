@@ -17,7 +17,12 @@ import java.io.StringReader;
  */
 public class MySpecialCharAnalyzer extends Analyzer {
     private char flag = ';';
+    private boolean normalFlag = true;
 
+    public MySpecialCharAnalyzer(char flag,boolean normalFlag) {
+        this.flag = flag;
+        this.normalFlag = normalFlag;
+    }
     public MySpecialCharAnalyzer(char flag) {
         this.flag = flag;
     }
@@ -25,12 +30,12 @@ public class MySpecialCharAnalyzer extends Analyzer {
     @Override
     protected TokenStreamComponents createComponents(String s) {
         MySpecialCharTokenizer tokenizer = new MySpecialCharTokenizer(flag);
-        MySpecialCharTokenFilter filter = new MySpecialCharTokenFilter(tokenizer, 1);
+        MySpecialCharTokenFilter filter = new MySpecialCharTokenFilter(tokenizer, 1,normalFlag);
         return new TokenStreamComponents(tokenizer, filter);
     }
 
     public static void main(String[] args) throws IOException {
-        MySpecialCharAnalyzer analyzer = new MySpecialCharAnalyzer(';');
+        MySpecialCharAnalyzer analyzer = new MySpecialCharAnalyzer(';',false);
         String arr[] = {"阿萨德;个梵蒂冈;鬼 地方个;aBC%*測試"};
 
         for (int i = 0; i < arr.length; i++) {
@@ -46,5 +51,7 @@ public class MySpecialCharAnalyzer extends Analyzer {
             System.out.println("===============================");
             tokenStream.close();//必须
         }
+
+        System.out.println((char) 59);
     }
 }

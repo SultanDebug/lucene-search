@@ -338,7 +338,7 @@ public class ShardIndexService {
                     break;
                 case 5:
                     // 特殊字符分词器
-                    analyzer = new MySpecialCharAnalyzer(entry.getValue().getSpecialChar());
+                    analyzer = new MySpecialCharAnalyzer(entry.getValue().getSpecialChar(), entry.getValue().getSpecialNormalFlag());
                     break;
                 case 6:
                     // 归一化不替换特殊字符分词器

@@ -253,14 +253,14 @@ public class QueryBuild {
 
         PhraseQuery.Builder namePhs = new PhraseQuery.Builder();
         PhraseQuery.Builder usedNamePhs = new PhraseQuery.Builder();
-        namePhs.setSlop(2);
-        usedNamePhs.setSlop(2);
-        int pos = 1;
+        namePhs.setSlop(1);
+        usedNamePhs.setSlop(1);
+        //int pos = 1;
         for (String token : singleWordToken) {
             String py = PinyinUtil.termToPinyin(token);
-            namePhs.add(new Term("name_single_pinyin", py), pos);
-            usedNamePhs.add(new Term("used_name_single_pinyin", py), pos);
-            pos++;
+            namePhs.add(new Term("name_single_pinyin", py));
+            usedNamePhs.add(new Term("used_name_single_pinyin", py));
+            //pos++;
 
 
             TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));

@@ -28,15 +28,18 @@ public class MySpecialCharTokenFilter extends TokenFilter {
      **/
     private int minTermLength;
 
+    private boolean nomalFlag = true;
+
     private String prefix;
     private static final int DEFAULT_MIN_TERM_LENGTH = 1;
 
-    protected MySpecialCharTokenFilter(TokenStream input, int minTermLength) {
+    protected MySpecialCharTokenFilter(TokenStream input, int minTermLength,boolean nomalFlag) {
         super(input);
         this.termAtt = addAttribute(CharTermAttribute.class);
         this.posIncrAtt = addAttribute(PositionIncrementAttribute.class);
         this.offsetAtt = addAttribute(OffsetAttribute.class);
         this.minTermLength = minTermLength;
+        this.nomalFlag = nomalFlag;
         if (this.minTermLength < DEFAULT_MIN_TERM_LENGTH) {
             this.minTermLength = DEFAULT_MIN_TERM_LENGTH;
         }
@@ -47,8 +50,7 @@ public class MySpecialCharTokenFilter extends TokenFilter {
         while (input.incrementToken()) {
             term = termAtt.toString();
             if (term.length() >= minTermLength) {
-                //todo normal
-                String nomalTerm = StringTools.normalWithNotWordStr(term);
+                String nomalTerm = nomalFlag?StringTools.normalWithNotWordStr(term):term;
                 if (StringUtils.isEmpty(nomalTerm)) {
                     continue;
                 }

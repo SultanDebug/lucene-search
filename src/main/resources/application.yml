@@ -248,25 +248,33 @@ configs:
           dbFieldFlag: 1
         industry_code_1:
           fieldName: industry_code_1
-          analyzerType: 6
+          analyzerType: 5
           fieldType: 2
           stored: 1
           dbFieldFlag: 1
+          specialChar: 59
+          specialNormalFlag: false
         industry_code_2:
           fieldName: industry_code_2
-          analyzerType: 6
+          analyzerType: 5
           fieldType: 2
           stored: 1
           dbFieldFlag: 1
+          specialChar: 59
+          specialNormalFlag: false
         industry_code_3:
           fieldName: industry_code_3
-          analyzerType: 6
+          analyzerType: 5
           fieldType: 2
           stored: 1
           dbFieldFlag: 1
+          specialChar: 59
+          specialNormalFlag: false
         industry_code_4:
           fieldName: industry_code_4
-          analyzerType: 6
+          analyzerType: 5
           fieldType: 2
           stored: 1
           dbFieldFlag: 1
+          specialChar: 59
+          specialNormalFlag: false
