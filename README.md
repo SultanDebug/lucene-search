@@ -46,9 +46,18 @@
   > GET请求，索引配置信息需要存在
 
 
-- 索引查询：http://localhost:8888/shard/query?index=enterprise&type=fuzzy&query=ce试sousuo词
+- 索引查询：http://localhost:8888/shard/query?filter={"industry_code_3":["C27200000","E49900000"],"found_years":[{"min":20,"max":25,"left":false,"right":true},{"min":1,"max":5,"left":true,"right":false}],"reg_capi":[{"min":2000,"max":3001,"left":false,"right":true}]}&index=enterprise&type=complex&query=江苏&page=0&size=3&explain=true
 
   > GET请求，拼音目前只按空格分词
+  > 条件示例，构建JsonObject直接序列化即可
+  > index 索引名称
+  > query 搜索词
+  > filter 过滤条件，json串  格式详见文档
+  > size 页大小
+  > page 页数
+  > explain 解释  true-是   false-否
+  > type 查询方式：detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，拼音短语及汉字单字大部分匹配
+
 
 - 索引新增、修改：http://localhost:8888/shard/add/enterprise
 
@@ -124,3 +133,11 @@
   * 模糊搜索单字召回加条件过滤通用化
 * 问题
   * 条件过滤值归一化问题，待处理方案确认
+
+
+#### v20230221版本
+* 功能改动
+  * 条件过滤通用化，复合查询及优化
+  * 伪分页支持
+* 问题
+  * 性能问题，效果问题
