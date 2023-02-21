@@ -50,7 +50,7 @@ public class MySpecialCharTokenFilter extends TokenFilter {
         while (input.incrementToken()) {
             term = termAtt.toString();
             if (term.length() >= minTermLength) {
-                String nomalTerm = nomalFlag?StringTools.normalWithNotWordStr(term):term;
+                String nomalTerm = nomalFlag? StringTools.normalWithNotWordStr(term):term;
                 if (StringUtils.isEmpty(nomalTerm)) {
                     continue;
                 }

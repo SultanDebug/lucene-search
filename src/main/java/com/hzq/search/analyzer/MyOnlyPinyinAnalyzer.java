@@ -34,7 +34,7 @@ public class MyOnlyPinyinAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         MyOnlyPinyinAnalyzer analyzer = new MyOnlyPinyinAnalyzer(true);
-        String arr[] = {"科技有限公司"};
+        String arr[] = {"维正知识产权科技有限公司","qingdao tong","qingdao人"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

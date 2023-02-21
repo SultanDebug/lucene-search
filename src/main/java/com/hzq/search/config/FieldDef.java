@@ -32,7 +32,7 @@ public class FieldDef {
      */
     private char specialChar;
     /**
-     * 特殊符号分词是否归一化 true-是  false-否【analyzerType 分词类型必须是5】
+     * 特殊符号分词是否归一化 1-是  0-否【analyzerType 分词类型必须是5】
      */
     private Boolean specialNormalFlag = true;
     /**

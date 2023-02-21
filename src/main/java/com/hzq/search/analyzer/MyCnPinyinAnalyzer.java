@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.io.StringReader;
 
 /**
- * 不带中文词项的拼音分词器
+ * 带中文词项的拼音分词器,保留中文单字及ik词项，词项位置信息完整
  *
  * @author Huangzq
  * @date 2022/11/22 10:56

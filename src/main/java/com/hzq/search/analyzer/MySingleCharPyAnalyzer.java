@@ -28,7 +28,7 @@ public class MySingleCharPyAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         MySingleCharPyAnalyzer analyzer = new MySingleCharPyAnalyzer();
-        String arr[] = {"中国邮政速递物流股份有限公司内蒙古自治区满洲里分公司商贸中心营业部", "内蒙古京新药业有限公司"};
+        String arr[] = {"中国邮政速递物流股份有限公司内蒙古自治区满洲里分公司商贸中心营业部","内蒙古京新药业有限公司"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

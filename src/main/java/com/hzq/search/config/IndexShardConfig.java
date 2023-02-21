@@ -53,7 +53,12 @@ public class IndexShardConfig {
      */
     private Integer shardNum;
     /**
+     * 分片召回数量
+     */
+    private Integer recallSize = 10;
+    /**
      * 字段配置
      */
     private Map<String, FieldDef> fieldMap;
+
 }

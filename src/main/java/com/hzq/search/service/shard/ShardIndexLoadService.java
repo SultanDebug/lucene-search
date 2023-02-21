@@ -53,9 +53,10 @@ public class ShardIndexLoadService {
      */
     private IndexReader fsReader;
 
-    int resultTopN = 10;
+    private int recallSize = 10;
 
-    public void setShardNum(int shardNum) {
+    public void setShardNum(int shardNum, int recallSize) {
+        this.recallSize = recallSize;
         this.shardNum = shardNum;
     }
 
@@ -103,7 +104,7 @@ public class ShardIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String, String>> shardSearch(Map<String, FieldDef> fieldMap, String query, String filter, AtomicLong totle, String type) {
+    public List<Map<String, String>> shardSearch(Map<String, FieldDef> fieldMap, String query, String filter, AtomicLong totle, String type, Boolean explain) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -115,7 +116,7 @@ public class ShardIndexLoadService {
                 fsSearcher = new IndexSearcher(fsReader);
                 //fsSearcher.setSimilarity(new BooleanSimilarity());
             }
-            return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type);
+            return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type, explain);
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);
         }
@@ -178,7 +179,7 @@ public class ShardIndexLoadService {
         Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
                 new SortField("company_score", SortField.Type.DOUBLE, true));
 
-        TopDocs prefixDocs = searcher.search(query1, resultTopN, sort, true, false);
+        TopDocs prefixDocs = searcher.search(query1, recallSize, sort, true, false);
 
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
@@ -207,7 +208,8 @@ public class ShardIndexLoadService {
                                                 String query,
                                                 String filter,
                                                 AtomicLong totle,
-                                                String type) throws Exception {
+                                                String type,
+                                                Boolean explain) throws Exception {
         Query query1 = null;
         if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
             query1 = QueryBuild.singleWordPyQuery(query, filter, fieldMap);
@@ -224,7 +226,7 @@ public class ShardIndexLoadService {
         Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
                 new SortField("company_score", SortField.Type.DOUBLE, true));
 
-        TopDocs prefixDocs = searcher.search(query1, resultTopN, sort, true, false);
+        TopDocs prefixDocs = searcher.search(query1, recallSize, sort, true, false);
 
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
@@ -232,11 +234,12 @@ public class ShardIndexLoadService {
             ScoreDoc scoreDoc = scoreDocs4[i];
             // 输出满足查询条件的 文档号
             Document doc = searcher.doc(scoreDoc.doc);
-            Explanation explain = searcher.explain(query1, scoreDoc.doc);
             Map<String, String> map = new HashMap<>();
             map.put("score", String.valueOf(scoreDoc.score));
             map.put("shard", String.valueOf(shardNum));
-            map.put("explain", explain.toString());
+            if (explain) {
+                map.put("explain", searcher.explain(query1, scoreDoc.doc).toString());
+            }
             map.put("type", "待定");
             fieldMap.values().stream()
                     .filter(o -> o.getStored() == 1)

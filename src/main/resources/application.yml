@@ -16,6 +16,7 @@ configs:
       #      incrPathName: mmapindex
       shardNum: 50
       switchIndex: /appstore/bird/bird-search-multirecall/switch.data
+      recallSize: 200
       fieldMap:
         id:
           fieldName: id

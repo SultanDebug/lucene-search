@@ -19,7 +19,7 @@ public class MySpecialCharAnalyzer extends Analyzer {
     private char flag = ';';
     private boolean normalFlag = true;
 
-    public MySpecialCharAnalyzer(char flag,boolean normalFlag) {
+    public MySpecialCharAnalyzer(char flag, boolean normalFlag) {
         this.flag = flag;
         this.normalFlag = normalFlag;
     }

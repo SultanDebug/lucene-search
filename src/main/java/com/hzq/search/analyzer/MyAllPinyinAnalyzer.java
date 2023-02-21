@@ -23,7 +23,7 @@ public class MyAllPinyinAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         MyAllPinyinAnalyzer analyzer = new MyAllPinyinAnalyzer();
-        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "青岛亚太物资有限公司"};
+        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "qingdao tong xun"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

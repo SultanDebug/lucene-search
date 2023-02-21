@@ -34,7 +34,7 @@ public class MyPinyinAnalyzer extends Analyzer {
 
     public static void main(String[] args) throws IOException {
         MyPinyinAnalyzer analyzer = new MyPinyinAnalyzer(true);
-        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "同义词数量爆棚"};
+        String arr[] = {"兰州金鹏通讯工程有限责任公司青岛分公司", "tongyi ci"};
 
         for (int i = 0; i < arr.length; i++) {
             TokenStream tokenStream = analyzer.tokenStream("hzq", new StringReader(arr[i]));

@@ -85,8 +85,11 @@ public class ShardController {
     public ResultResponse<Map<String, Object>> query(@RequestParam("index") String index,
                                                      @RequestParam("query") String query,
                                                      @RequestParam(name = "filter", defaultValue = "") String filter,
+                                                     @RequestParam(value = "size", defaultValue = "20") Integer size,
+                                                     @RequestParam(value = "page", defaultValue = "0") Integer page,
+                                                     @RequestParam(value = "explain", defaultValue = "false") Boolean explain,
                                                      @RequestParam(name = "type", defaultValue = "fuzzy") String type) {
-        Map<String, Object> name = shardIndexMergeLoadService.concurrentSearch(index, query, filter, type);
+        Map<String, Object> name = shardIndexMergeLoadService.concurrentSearch(index, query, filter, type, size, page, explain);
         return ResultResponse.success(name);
     }
 
