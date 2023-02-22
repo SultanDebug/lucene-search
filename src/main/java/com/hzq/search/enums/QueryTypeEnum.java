@@ -19,6 +19,14 @@ public enum QueryTypeEnum {
      */
     FUZZY_QUERY("fuzzy", "模糊查询"),
     /**
+     * 拼音短语查询
+     */
+    PINYIN_QUERY("pinyin", "拼音短语查询"),
+    /**
+     * 单字模糊查询
+     */
+    SINGLE_FUZZY_QUERY("single_fuzzy", "单字模糊查询"),
+    /**
      * 复合查询
      */
     COMPLEX_QUERY("complex", "复合查询");
@@ -42,5 +50,14 @@ public enum QueryTypeEnum {
 
     public String getDesc() {
         return desc;
+    }
+
+    public static QueryTypeEnum findByType(String type) {
+        for (QueryTypeEnum value : QueryTypeEnum.values()) {
+            if (value.type.equals(type)) {
+                return value;
+            }
+        }
+        return null;
     }
 }

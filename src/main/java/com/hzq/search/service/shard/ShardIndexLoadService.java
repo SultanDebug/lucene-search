@@ -1,8 +1,10 @@
 package com.hzq.search.service.shard;
 
+import com.google.common.collect.Lists;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.enums.QueryTypeEnum;
-import com.hzq.search.service.shard.query.QueryBuild;
+import com.hzq.search.service.shard.query.QueryBuildAbstract;
+import com.hzq.search.service.shard.query.QueryManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.lucene.document.Document;
@@ -104,7 +106,7 @@ public class ShardIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:14
      */
-    public List<Map<String, String>> shardSearch(Map<String, FieldDef> fieldMap, String query, String filter, AtomicLong totle, String type, Boolean explain) {
+    public List<Map<String, String>> shardSearch(String index, Map<String, FieldDef> fieldMap, String query, String filter, AtomicLong totle, String type, Boolean explain) {
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return null;
@@ -116,7 +118,7 @@ public class ShardIndexLoadService {
                 fsSearcher = new IndexSearcher(fsReader);
                 //fsSearcher.setSimilarity(new BooleanSimilarity());
             }
-            return this.pySesarch(fsSearcher, fieldMap, query, filter, totle, type, explain);
+            return this.sesarch(index, fsSearcher, fieldMap, query, filter, totle, type, explain);
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);
         }
@@ -152,74 +154,21 @@ public class ShardIndexLoadService {
      * 10、特殊字符 + - && || ! ( ) { } [ ] ^ " ~ * ? : \ ，如果查询文本总就有特殊字符，则需要用\进行转义。
      * QueryParser.escape(q)  可转换q中含有查询关键字的字符！如：* ,? 等
      */
-
-    private List<Map<String, String>> sesarch(IndexSearcher searcher,
+    private List<Map<String, String>> sesarch(String index,
+                                              IndexSearcher searcher,
                                               Map<String, FieldDef> fieldMap,
                                               String query,
                                               String filter,
                                               AtomicLong totle,
-                                              String type) throws Exception {
-//        Query query1 = QueryBuild.fuzzyQuery(query);
-//        Query query1 = QueryBuild.booleanQuery(query);
-//        Query query1 = QueryBuild.sugQuery(searcher,query);
-//        Query query1 = QueryBuild.sugQuery(query);
-        Query query1 = null;
-        if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
-            query1 = QueryBuild.singleWordPyQuery(query, filter, fieldMap);
-        } else if (type.equals(QueryTypeEnum.COMPLEX_QUERY.getType())) {
-            query1 = QueryBuild.singleWordComplexQuery(query, filter, fieldMap);
-        } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
-            query1 = QueryBuild.sugQueryV2(query);
-        } else {
-            query1 = QueryBuild.busidQuery(query);
+                                              String type,
+                                              Boolean explain) throws Exception {
+        QueryTypeEnum queryTypeEnum = QueryTypeEnum.findByType(type);
+        QueryBuildAbstract queryBuild = QueryManager.getQueryBuild(index);
+        if (queryBuild == null || queryTypeEnum == null) {
+            log.error("参数{}，{}异常或未注册", type, index);
+            return Lists.newArrayList();
         }
-
-        List<Map<String, String>> list = new ArrayList<>();
-
-        Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
-                new SortField("company_score", SortField.Type.DOUBLE, true));
-
-        TopDocs prefixDocs = searcher.search(query1, recallSize, sort, true, false);
-
-        totle.addAndGet(prefixDocs.totalHits);
-        ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
-        for (int i = 0; i < scoreDocs4.length; i++) {
-            ScoreDoc scoreDoc = scoreDocs4[i];
-            // 输出满足查询条件的 文档号
-            Document doc = searcher.doc(scoreDoc.doc);
-            Explanation explain = searcher.explain(query1, scoreDoc.doc);
-            Map<String, String> map = new HashMap<>();
-            map.put("score", String.valueOf(scoreDoc.score));
-            map.put("shard", String.valueOf(shardNum));
-            map.put("explain", explain.toString());
-            map.put("type", "待定");
-            fieldMap.values().stream()
-                    .filter(o -> o.getStored() == 1)
-                    .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
-            list.add(map);
-        }
-
-        return list;
-
-    }
-
-    private List<Map<String, String>> pySesarch(IndexSearcher searcher,
-                                                Map<String, FieldDef> fieldMap,
-                                                String query,
-                                                String filter,
-                                                AtomicLong totle,
-                                                String type,
-                                                Boolean explain) throws Exception {
-        Query query1 = null;
-        if (type.equals(QueryTypeEnum.FUZZY_QUERY.getType())) {
-            query1 = QueryBuild.singleWordPyQuery(query, filter, fieldMap);
-        } else if (type.equals(QueryTypeEnum.COMPLEX_QUERY.getType())) {
-            query1 = QueryBuild.singleWordComplexQuery(query, filter, fieldMap);
-        } else if (type.equals(QueryTypeEnum.PREFIX_QUERY.getType())) {
-            query1 = QueryBuild.sugQueryV2(query);
-        } else {
-            query1 = QueryBuild.busidQuery(query);
-        }
+        Query query1 = queryBuild.buildQuery(query, filter, fieldMap, queryTypeEnum);
 
         List<Map<String, String>> list = new ArrayList<>();
 

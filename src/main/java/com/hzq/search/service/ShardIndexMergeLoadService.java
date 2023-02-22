@@ -30,7 +30,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
      * @date 2022/12/6 19:33
      */
     public Map<String, Object> concurrentSearch(String index, String query, String filter, String type, Integer size, Integer page, Boolean explain) {
-        log.info("分片查询开始：查询类型-{},查询索引-{},搜索词-{}", type, index, query);
+        log.info("分片查询开始：查询类型-{},查询索引-{},搜索词-{}，类型-{}，条件-{}", type, index, query, type, filter);
         if (!this.checkIndex(false, index)) {
             log.warn("索引不存在{}", index);
             return null;
@@ -46,9 +46,8 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
         long start = System.currentTimeMillis();
         try {
             AtomicLong totle = new AtomicLong(0);
-            //String finalQuery = query;
             List<Supplier<List<Map<String, String>>>> list = indexLoadServiceMap.values().stream()
-                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().shardSearch(fieldMap, query, filter, totle, type, explain))
+                    .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().shardSearch(index, fieldMap, query, filter, totle, type, explain))
                     .collect(Collectors.toList());
 
             List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
