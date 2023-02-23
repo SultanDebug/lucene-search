@@ -114,20 +114,19 @@ public class ShardController {
 
     @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create(@RequestParam("index") String index) {
-        Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
-        if (semaphore.tryAcquire()) {
+        Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index,s -> new Semaphore(1));
+        if(semaphore.tryAcquire()){
             try {
-                semaphore.acquire();
                 List<String> list = shardIndexMergeService.initShardIndexForPage(index);
                 return ResultResponse.success(list);
-            } catch (Exception e) {
-                log.error("索引生成失败", e);
-                return ResultResponse.fail("101", "索引生成失败，稍后再试");
-            } finally {
+            }catch (Exception e) {
+                log.error("索引生成失败",e);
+                return ResultResponse.fail("101","索引生成失败，稍后再试");
+            }finally {
                 semaphore.release();
             }
-        } else {
-            return ResultResponse.fail("101", "索引生成中，勿重复提交");
+        }else{
+            return ResultResponse.fail("101","索引生成中，勿重复提交");
         }
     }
 

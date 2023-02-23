@@ -26,8 +26,14 @@ public class ResearchTestApplicationTests {
 
 
 
-        List<String> s3 = PinyinSplits.split("womende提案haobuhao");
+        List<String> s3 = PinyinSplits.split("fujianjinan");
         System.out.println(s3);
+
+        List<String> s4 = PinyinSplits.split("shandongjinan");
+        System.out.println(s4);
+
+        List<String> s5 = PinyinSplits.split("jinanren");
+        System.out.println(s5);
 
     }
 }
