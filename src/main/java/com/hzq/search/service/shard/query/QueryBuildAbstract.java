@@ -7,6 +7,7 @@ import com.hzq.search.config.FieldDef;
 import com.hzq.search.enums.FieldTypeEnum;
 import com.hzq.search.enums.QueryTypeEnum;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.Term;
@@ -98,5 +99,5 @@ public abstract class QueryBuildAbstract {
         return keyFlag.get() ? filterCondition.build() : null;
     }
 
-    public abstract Query buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type);
+    public abstract Pair<String , Query> buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type);
 }

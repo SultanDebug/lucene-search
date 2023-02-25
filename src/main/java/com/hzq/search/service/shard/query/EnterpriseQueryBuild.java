@@ -25,6 +25,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.hzq.search.enums.QueryTypeEnum.*;
+
 /**
  * @author Huangzq
  * @date 2022/12/15 16:28
@@ -379,20 +381,20 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
     }
 
     @Override
-    public Query buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
+    public Pair<String , Query> buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
         switch (type) {
             case COMPLEX_QUERY:
-                return singleWordComplexQuery(query, filter, fieldMap);
+                return Pair.of(COMPLEX_QUERY.getType(),singleWordComplexQuery(query, filter, fieldMap));
             case SINGLE_FUZZY_QUERY:
-                return singleWordPyQuery(query, filter, fieldMap);
+                return Pair.of(SINGLE_FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
             case PREFIX_QUERY:
-                return sugQueryV2(query);
+                return Pair.of(PREFIX_QUERY.getType(),sugQueryV2(query));
             case PINYIN_QUERY:
-                return pinyinPhraseQuery(query, filter, fieldMap);
+                return Pair.of(PINYIN_QUERY.getType(),pinyinPhraseQuery(query, filter, fieldMap));
             case FUZZY_QUERY:
-                return singleWordFuzzyQuery(query, filter, fieldMap);
+                return Pair.of(FUZZY_QUERY.getType(),singleWordFuzzyQuery(query, filter, fieldMap));
             default:
-                return busIdQuery(query);
+                return Pair.of(DETAIL_BY_COMPANY_ID.getType(),busIdQuery(query));
         }
     }
 

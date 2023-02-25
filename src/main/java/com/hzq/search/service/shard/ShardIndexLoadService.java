@@ -7,6 +7,7 @@ import com.hzq.search.service.shard.query.QueryBuildAbstract;
 import com.hzq.search.service.shard.query.QueryManager;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -168,14 +169,14 @@ public class ShardIndexLoadService {
             log.error("参数{}，{}异常或未注册", type, index);
             return Lists.newArrayList();
         }
-        Query query1 = queryBuild.buildQuery(query, filter, fieldMap, queryTypeEnum);
+        Pair<String , Query> queryPair = queryBuild.buildQuery(query, filter, fieldMap, queryTypeEnum);
 
         List<Map<String, String>> list = new ArrayList<>();
 
         Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
                 new SortField("company_score", SortField.Type.DOUBLE, true));
 
-        TopDocs prefixDocs = searcher.search(query1, recallSize, sort, true, false);
+        TopDocs prefixDocs = searcher.search(queryPair.getRight(), recallSize, sort, true, false);
 
         totle.addAndGet(prefixDocs.totalHits);
         ScoreDoc[] scoreDocs4 = prefixDocs.scoreDocs;
@@ -187,9 +188,9 @@ public class ShardIndexLoadService {
             map.put("score", String.valueOf(scoreDoc.score));
             map.put("shard", String.valueOf(shardNum));
             if (explain) {
-                map.put("explain", searcher.explain(query1, scoreDoc.doc).toString());
+                map.put("explain", searcher.explain(queryPair.getRight(), scoreDoc.doc).toString());
             }
-            map.put("type", "待定");
+            map.put("type", queryPair.getLeft());
             fieldMap.values().stream()
                     .filter(o -> o.getStored() == 1)
                     .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
