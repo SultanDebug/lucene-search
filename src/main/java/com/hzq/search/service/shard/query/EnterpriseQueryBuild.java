@@ -101,10 +101,8 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         int minLength = 0;
         if (queryLength <= 5) {
             minLength = queryLength;
-        } else if (queryLength <= 8) {
-            minLength = queryLength - 2;
         } else {
-            minLength = (int) Math.round(singleWordToken.size() * 0.8);
+            minLength = queryLength - 1;
         }
 
         nameWordQuery.setMinimumNumberShouldMatch(minLength);

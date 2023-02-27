@@ -190,7 +190,7 @@ public class ShardIndexLoadService {
             if (explain) {
                 map.put("explain", searcher.explain(queryPair.getRight(), scoreDoc.doc).toString());
             }
-            map.put("type", queryPair.getLeft());
+            map.put("data_type", queryPair.getLeft());
             fieldMap.values().stream()
                     .filter(o -> o.getStored() == 1)
                     .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
