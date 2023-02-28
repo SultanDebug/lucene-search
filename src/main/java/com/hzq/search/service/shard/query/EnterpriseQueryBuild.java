@@ -384,13 +384,13 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
             case COMPLEX_QUERY:
                 return Pair.of(COMPLEX_QUERY.getType(),singleWordComplexQuery(query, filter, fieldMap));
             case SINGLE_FUZZY_QUERY:
-                return Pair.of(SINGLE_FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
+                return Pair.of(SINGLE_FUZZY_QUERY.getType(),singleWordFuzzyQuery(query, filter, fieldMap));
             case PREFIX_QUERY:
                 return Pair.of(PREFIX_QUERY.getType(),sugQueryV2(query));
             case PINYIN_QUERY:
                 return Pair.of(PINYIN_QUERY.getType(),pinyinPhraseQuery(query, filter, fieldMap));
             case FUZZY_QUERY:
-                return Pair.of(FUZZY_QUERY.getType(),singleWordFuzzyQuery(query, filter, fieldMap));
+                return Pair.of(FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
             default:
                 return Pair.of(DETAIL_BY_COMPANY_ID.getType(),busIdQuery(query));
         }
