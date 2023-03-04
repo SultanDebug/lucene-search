@@ -6,17 +6,26 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.analysis.Analyzer;
+import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.miscellaneous.PerFieldAnalyzerWrapper;
+import org.apache.lucene.analysis.standard.StandardAnalyzer;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.*;
-import org.apache.lucene.index.IndexWriter;
-import org.apache.lucene.index.IndexWriterConfig;
-import org.apache.lucene.index.IndexableField;
-import org.apache.lucene.index.Term;
+import org.apache.lucene.index.*;
+import org.apache.lucene.search.*;
+import org.apache.lucene.search.similarities.BM25Similarity;
+import org.apache.lucene.search.similarities.BooleanSimilarity;
+import org.apache.lucene.search.similarities.PerFieldSimilarityWrapper;
+import org.apache.lucene.search.similarities.Similarity;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
+import org.apache.lucene.store.RAMDirectory;
+import org.apache.lucene.util.BytesRef;
 import org.springframework.util.CollectionUtils;
+import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import java.io.File;
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -83,6 +92,100 @@ public class ShardIndexService {
         IndexWriterConfig conf = new IndexWriterConfig(analyzer);
         conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
         return conf;
+    }
+
+    public static void main(String[] args) throws IOException {
+        Analyzer analyzer = new StandardAnalyzer();
+        Directory index = new RAMDirectory();
+
+        Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
+        fieldAnalyzers.put("name", new IKAnalyzer(false));
+        fieldAnalyzers.put("id", new StandardAnalyzer());
+        fieldAnalyzers.put("used_name", new MyCnPinyinAnalyzer(true));
+        PerFieldAnalyzerWrapper analyzerWrapper = new PerFieldAnalyzerWrapper(analyzer, fieldAnalyzers);
+        Similarity similarity = new PerFieldSimilarityWrapper() {
+            @Override
+            public Similarity get(String name) {
+                if (name.equals("name")) {
+                    return new BM25Similarity();
+                } else if (name.equals("id")) {
+                    return new BooleanSimilarity();
+                }
+                return new BM25Similarity();
+            }
+        };
+        BytesRef bytesRef = analyzerWrapper.normalize("id", "ABCD-123");
+        System.out.println(bytesRef.utf8ToString());
+        IndexWriterConfig conf = new IndexWriterConfig(analyzerWrapper);
+        conf.setSimilarity(similarity);
+        IndexWriter writer = new IndexWriter(index, conf);
+
+        Document doc1 = new Document();
+        doc1.add(new StringField("id", analyzerWrapper.normalize("id", "ABCD123").utf8ToString(), Field.Store.YES));
+        doc1.add(new TextField("name", "高新技术", Field.Store.YES));
+//        FieldType fieldType = new FieldType();
+//        fieldType.setIndexOptions(IndexOptions.DOCS_AND_FREQS_AND_POSITIONS);
+//        fieldType.setStored(true);
+//        doc1.add(new Field("used_name", "内蒙古京新药业有限公司", fieldType));
+        doc1.add(new TextField("used_name", "内蒙古京新药业有限公司", Field.Store.YES));
+
+        writer.addDocument(doc1);
+        writer.commit();
+        writer.close();
+
+        IndexReader reader = DirectoryReader.open(index);
+        IndexSearcher searcher = new IndexSearcher(reader);
+        searcher.setSimilarity(similarity);
+        //按域获取分词结果
+        List<String> idSegments = getSegmentToken("id", "ABCD-123", analyzerWrapper);
+        List<String> nameSegments = getSegmentToken("name", "高新技术", analyzerWrapper);
+        List<String> usedNameSegments = getSegmentToken("used_name", "内蒙古京新药业有限公司", analyzerWrapper);
+        System.out.println(idSegments);
+        System.out.println(nameSegments);
+        System.out.println(usedNameSegments);
+//        BooleanQuery.Builder booleanQuery = new BooleanQuery.Builder();
+//        Query query = new TermQuery(new Term("id", analyzerWrapper.normalize("id", "AbCD123").utf8ToString()));
+//        Query query2 = new TermQuery(new Term("name", "高新"));
+//        booleanQuery.add(query, BooleanClause.Occur.SHOULD);
+//        booleanQuery.add(query2, BooleanClause.Occur.SHOULD);
+//        TopDocs docs = searcher.search(booleanQuery, 10);
+
+        Query phraseQuery = new PhraseQuery.Builder()
+                .add(new Term("used_name", "内蒙古"))
+                .add(new Term("used_name", "新"))
+                .setSlop(1).build();
+
+        TopDocs docs = searcher.search(phraseQuery, 10);
+
+        ScoreDoc[] hits = docs.scoreDocs;
+        for (int i = 0; i < hits.length; i++) {
+            ScoreDoc scoreDoc = hits[i];
+            // 输出满足查询条件的 文档号
+            Document doc = searcher.doc(scoreDoc.doc);
+            System.out.println(doc);
+        }
+    }
+
+    /**
+     * 按域获取分词结果
+     * @param query
+     * @return
+     */
+    private static List<String> getSegmentToken(String field, String query, PerFieldAnalyzerWrapper analyzerWrapper) {
+        TokenStream tokenStream = analyzerWrapper.tokenStream(field, query);
+        List<String> res = new ArrayList<>();
+        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+        try {
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+        } catch (IOException e) {
+            log.error("文档域:{}, 分词内容:{}, 分词异常：{}", field, query, e);
+        }
+
+        return res;
     }
 
     /**
@@ -292,7 +395,11 @@ public class ShardIndexService {
     public void noticeSearcher() {
         try {
             if (mainIndex != null) {
-                mainIndex.flush();
+                //mainIndex.flush();
+                long start = System.currentTimeMillis();
+                log.info("段合并开始{}",shardNum);
+                mainIndex.forceMerge(1);
+                log.info("段合并结束【{}】",System.currentTimeMillis()-start);
                 mainIndex.commit();
                 mainIndex.close();
             }
@@ -303,6 +410,26 @@ public class ShardIndexService {
             log.error("索引删除关闭失败：{}", e.getMessage(), e);
         }
         shardIndexLoadService.indexUpdate();
+    }
+
+
+    /**
+     * Description:
+     * 初始化后数据提交及搜索端通知
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/14 17:54
+     */
+    public void flushIndex() {
+        try {
+            if (mainIndex != null) {
+                mainIndex.flush();
+            }
+        } catch (Exception e) {
+            log.error("索引刷盘失败：{}", e.getMessage(), e);
+        }
     }
 
     /**
@@ -326,7 +453,8 @@ public class ShardIndexService {
                     break;
                 case 2:
                     // 拼音字段使用标准分词器
-                    analyzer = new MyCnPinyinAnalyzer(true);
+//                    analyzer = new MyCnPinyinAnalyzer(true);
+                    analyzer = new MyNGramAnalyzer();
                     break;
                 case 3:
                     // 简拼字段使用标准分词器

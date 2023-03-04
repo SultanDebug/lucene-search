@@ -2,6 +2,7 @@ package com.hzq.search.service;
 
 import com.alibaba.druid.pool.DruidDataSource;
 import com.alibaba.fastjson.JSON;
+import com.google.common.collect.Lists;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.config.IndexShardConfig;
 import com.hzq.search.service.shard.ShardIndexLoadService;
@@ -132,7 +133,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 //加载数据
                 List<Map<String, Object>> tmps = queryForPage(errorSqls, jdbcTemplate, indexShardConfig.getDbTableName(), fields, maxId, pageSize);
                 if (CollectionUtils.isEmpty(tmps)) {
-                    continue;
+                    return Lists.newArrayList("数据库加载异常");
                 }
                 maxId = (long) tmps.get(tmps.size() - 1).get("id");
                 count += tmps.size();
@@ -155,27 +156,38 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 //分片任务执行
                 AsynUtil.executeSync(executorService, tasks);
 
+                //分片索引加载完成，通知索引切换
+                for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
+                    entry.getValue().getLeft().flushIndex();
+                }
+
                 if (tmps.size() < pageSize) {
                     break;
                 }
                 // System.gc();
                 log.info("总数据加载进度：{}", count);
                 //todo 测试代码
-                if (count >= pageSize) {
+                if (count >= 3*pageSize) {
                     break;
                 }
             }
 
 
             //分片索引加载完成，通知索引切换
-            for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
+            /*for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
                 entry.getValue().getLeft().noticeSearcher();
-            }
+            }*/
+
+            List<AsynUtil.TaskExecute> collect = SHARD_INDEX_MAP.get(index).values().stream()
+                    .map(o -> (AsynUtil.TaskExecute) () -> o.getLeft().noticeSearcher())
+                    .collect(Collectors.toList());
+
+            AsynUtil.executeSync(executorService,collect);
 
             //保存当前索引信息
             this.saveCurrentIndexInfo(index, CUR_INDEX_MAP.get(index));
 
-            log.error("失败sql：{}", JSON.toJSONString(errorSqls));
+            log.warn("失败sql：{}", JSON.toJSONString(errorSqls));
 
             return errorSqls;
 
@@ -242,7 +254,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         while (true) {
             List<Map<String, Object>> tmps = query(errorSqls, jdbcTemplate, tableName, fields, maxId, size);
             if (CollectionUtils.isEmpty(tmps)) {
-                continue;
+                break;
             }
             res.addAll(tmps);
             if (tmps.size() < size) {

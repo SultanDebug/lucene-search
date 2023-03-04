@@ -91,9 +91,9 @@ public abstract class QueryBuildAbstract {
                         keyFlag.set(true);
                     }
                 }
-            } else {
+            } /*else {
                 log.warn("字段{}未定义，请检查", key);
-            }
+            }*/
         });
 
         return keyFlag.get() ? filterCondition.build() : null;

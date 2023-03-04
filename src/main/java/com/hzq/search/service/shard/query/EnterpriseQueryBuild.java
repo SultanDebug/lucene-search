@@ -19,11 +19,14 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
+import org.springframework.util.CollectionUtils;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
+import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static com.hzq.search.enums.QueryTypeEnum.*;
 
@@ -211,8 +214,8 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
 
         PhraseQuery.Builder namePhs = new PhraseQuery.Builder();
         PhraseQuery.Builder usedNamePhs = new PhraseQuery.Builder();
-        namePhs.setSlop(1);
-        usedNamePhs.setSlop(1);
+        /*namePhs.setSlop(1);
+        usedNamePhs.setSlop(1);*/
         for (String token : singleWordToken) {
             String py = PinyinUtil.termToPinyin(token);
             namePhs.add(new Term("name_single_pinyin", py));
@@ -239,6 +242,8 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
     }
 
 
+
+
     public static Query singleWordFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
         List<String> singleWordToken = getSingleWordComplexToken(query);
 
@@ -253,6 +258,54 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         }
         nameWordQuery.setMinimumNumberShouldMatch(minLength);
         userNameWordQuery.setMinimumNumberShouldMatch(minLength);
+
+        for (String token : singleWordToken) {
+            TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
+            nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
+            TermQuery termUserNameQuery = new TermQuery(new Term("used_name_pinyin", token));
+            userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
+        }
+
+        //条件过滤
+        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
+
+        //多字段匹配取最高得分
+        List<Query> termList = new ArrayList<>();
+        termList.add(nameWordQuery.build());
+        termList.add(userNameWordQuery.build());
+        DisjunctionMaxQuery complexQueries = new DisjunctionMaxQuery(termList, 0);
+
+        if (conditionFilter == null) {
+            return complexQueries;
+        } else {
+            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
+            finalQuery.add(complexQueries, BooleanClause.Occur.MUST);
+            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
+            return finalQuery.build();
+        }
+    }
+
+
+    public Query ngramComplexFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap){
+        Query query1 = singleWordFuzzyQuery(query, filter, fieldMap);
+        Query query2 = ngramFuzzyQuery(query, filter, fieldMap);
+
+        BooleanQuery.Builder builder = new BooleanQuery.Builder();
+        builder.add(query1, BooleanClause.Occur.FILTER);
+        builder.add(query2, BooleanClause.Occur.MUST);
+
+        return builder.build();
+    }
+
+
+    public Query ngramFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
+        List<String> singleWordToken = getNGramToken(query);
+
+        BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
+        BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
+        int queryLength = singleWordToken.size();
+        nameWordQuery.setMinimumNumberShouldMatch(queryLength-1);
+        userNameWordQuery.setMinimumNumberShouldMatch(queryLength-1);
 
         for (String token : singleWordToken) {
             TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
@@ -330,6 +383,23 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         return new ArrayList<>();
     }
 
+    private List<String> getNGramToken(String query) {
+        try{
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = ikAnalyzer.tokenStream("", query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+            return res;
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
+        }
+        return new ArrayList<>();
+    }
+
 
     public static Query busIdQuery(String query) {
         return new TermQuery(new Term("company_id", query));
@@ -388,9 +458,17 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
             case PREFIX_QUERY:
                 return Pair.of(PREFIX_QUERY.getType(),sugQueryV2(query));
             case PINYIN_QUERY:
+                if(query.length()<4){
+                    return null;
+                }
                 return Pair.of(PINYIN_QUERY.getType(),pinyinPhraseQuery(query, filter, fieldMap));
             case FUZZY_QUERY:
                 return Pair.of(FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
+            case NGRAM_FUZZY_QUERY:
+                if(query.length()<6){
+                    return null;
+                }
+                return Pair.of(NGRAM_FUZZY_QUERY.getType(),ngramComplexFuzzyQuery(query, filter, fieldMap));
             default:
                 return Pair.of(DETAIL_BY_COMPANY_ID.getType(),busIdQuery(query));
         }

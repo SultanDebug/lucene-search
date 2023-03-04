@@ -169,7 +169,15 @@ public class ShardIndexLoadService {
             log.error("参数{}，{}异常或未注册", type, index);
             return Lists.newArrayList();
         }
+        if(StringUtils.isEmpty(query) || query.matches(".*[a-zA-z].*") || query.matches(".*[0-9].*")){
+            //log.error("参数{}含字母或数字，不支持处理", query);
+            return Lists.newArrayList();
+        }
         Pair<String , Query> queryPair = queryBuild.buildQuery(query, filter, fieldMap, queryTypeEnum);
+
+        if(queryPair == null){
+            return Lists.newArrayList();
+        }
 
         List<Map<String, String>> list = new ArrayList<>();
 

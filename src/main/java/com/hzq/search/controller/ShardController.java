@@ -87,13 +87,13 @@ public class ShardController {
     /**
      * 查询接口
      *
-     * @param index   索引名称
-     * @param query   搜索词
-     * @param filter  过滤条件，json串  格式详见文档
-     * @param size    页大小 默认20
-     * @param page    页数 默认0：第一页
+     * @param index 索引名称
+     * @param query 搜索词
+     * @param filter 过滤条件，json串  格式详见文档
+     * @param size 页大小 默认20
+     * @param page 页数 默认0：第一页
      * @param explain 解释，默认不解释  true-是   false-否
-     * @param type    查询方式，默认模糊查询：detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，拼音短语及汉字单字大部分匹配
+     * @param type 查询方式，默认模糊查询：detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，拼音短语及汉字单字大部分匹配
      * @return
      * @author Huangzq
      * @date 2023/2/21 11:10
@@ -110,7 +110,7 @@ public class ShardController {
         return ResultResponse.success(name);
     }
 
-    public static ConcurrentMap<String, Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
+    public static ConcurrentMap<String,Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
 
     @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create(@RequestParam("index") String index) {

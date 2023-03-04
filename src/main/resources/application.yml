@@ -24,20 +24,20 @@ configs:
           fieldType: 1
           stored: 1
           dbFieldFlag: 1
-        all_name_pinyin:
-          fieldName: all_name_pinyin
-          analyzerType: 4
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: name
-        all_used_name_pinyin:
-          fieldName: all_used_name_pinyin
-          analyzerType: 4
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: name
+        #        all_name_pinyin:
+        #          fieldName: all_name_pinyin
+        #          analyzerType: 4
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: name
+        #        all_used_name_pinyin:
+        #          fieldName: all_used_name_pinyin
+        #          analyzerType: 4
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: name
         name_pinyin:
           fieldName: name_pinyin
           analyzerType: 2
@@ -66,54 +66,54 @@ configs:
           stored: 0
           dbFieldFlag: 0
           parentField: used_name
-        name_jianpin:
-          fieldName: name_jianpin
-          analyzerType: 3
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: name
-        used_name_jianpin:
-          fieldName: used_name_jianpin
-          analyzerType: 3
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: used_name
+        #        name_jianpin:
+        #          fieldName: name_jianpin
+        #          analyzerType: 3
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: name
+        #        used_name_jianpin:
+        #          fieldName: used_name_jianpin
+        #          analyzerType: 3
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: used_name
         name:
           fieldName: name
           analyzerType: 1
           fieldType: 1
           stored: 1
           dbFieldFlag: 1
-        fuzz_name:
-          fieldName: fuzz_name
-          analyzerType: 7
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: name
-        fuzz_used_name:
-          fieldName: fuzz_used_name
-          analyzerType: 7
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: used_name
-        single_fuzz_name:
-          fieldName: single_fuzz_name
-          analyzerType: 8
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: name
-        single_fuzz_used_name:
-          fieldName: single_fuzz_used_name
-          analyzerType: 8
-          fieldType: 1
-          stored: 0
-          dbFieldFlag: 0
-          parentField: used_name
+        #        fuzz_name:
+        #          fieldName: fuzz_name
+        #          analyzerType: 7
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: name
+        #        fuzz_used_name:
+        #          fieldName: fuzz_used_name
+        #          analyzerType: 7
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: used_name
+        #        single_fuzz_name:
+        #          fieldName: single_fuzz_name
+        #          analyzerType: 8
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: name
+        #        single_fuzz_used_name:
+        #          fieldName: single_fuzz_used_name
+        #          analyzerType: 8
+        #          fieldType: 1
+        #          stored: 0
+        #          dbFieldFlag: 0
+        #          parentField: used_name
         used_name:
           fieldName: used_name
           analyzerType: 1

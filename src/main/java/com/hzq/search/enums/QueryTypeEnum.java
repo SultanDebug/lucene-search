@@ -19,6 +19,10 @@ public enum QueryTypeEnum {
      */
     FUZZY_QUERY("fuzzy", "模糊查询"),
     /**
+     * ngram模糊查询
+     */
+    NGRAM_FUZZY_QUERY("ngram_fuzzy", "ngram模糊查询"),
+    /**
      * 拼音短语查询
      */
     PINYIN_QUERY("pinyin", "拼音短语查询"),
