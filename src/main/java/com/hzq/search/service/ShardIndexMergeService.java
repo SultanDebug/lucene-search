@@ -167,7 +167,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 // System.gc();
                 log.info("总数据加载进度：{}", count);
                 //todo 测试代码
-                if (count >= 3*pageSize) {
+                if (count >= pageSize) {
                     break;
                 }
             }
@@ -177,15 +177,19 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
             /*for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
                 entry.getValue().getLeft().noticeSearcher();
             }*/
-
+            long start = System.currentTimeMillis();
+            log.info("段合并开始{}", shardNum);
+            Integer curIndex = CUR_INDEX_MAP.get(index);
+            String searchPath = curIndex.equals(MAIN_INDEX) ? indexShardConfig.getFsPath() : indexShardConfig.getAliaPath();
             List<AsynUtil.TaskExecute> collect = SHARD_INDEX_MAP.get(index).values().stream()
-                    .map(o -> (AsynUtil.TaskExecute) () -> o.getLeft().noticeSearcher())
+                    .map(o -> (AsynUtil.TaskExecute) () -> o.getLeft().noticeSearcher(searchPath))
                     .collect(Collectors.toList());
+            log.info("段合并结束【{}】", System.currentTimeMillis() - start);
 
-            AsynUtil.executeSync(executorService,collect);
+            AsynUtil.executeSync(executorService, collect);
 
             //保存当前索引信息
-            this.saveCurrentIndexInfo(index, CUR_INDEX_MAP.get(index));
+            this.saveCurrentIndexInfo(index, JSON.toJSONString(CUR_INDEX_MAP));
 
             log.warn("失败sql：{}", JSON.toJSONString(errorSqls));
 

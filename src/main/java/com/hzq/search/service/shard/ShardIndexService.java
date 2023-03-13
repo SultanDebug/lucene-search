@@ -168,6 +168,7 @@ public class ShardIndexService {
 
     /**
      * 按域获取分词结果
+     *
      * @param query
      * @return
      */
@@ -226,7 +227,7 @@ public class ShardIndexService {
             mainIndex.commit();
 
             //通知load端重新加载
-            shardIndexLoadService.indexUpdate();
+            shardIndexLoadService.indexUpdate(null);
             log.info("分片【" + shardNum + "】合并数量：{},花费：{}", merge, System.currentTimeMillis() - start);
         } catch (Exception e) {
             log.error("索引合并失败：{}", e.getMessage(), e);
@@ -299,7 +300,7 @@ public class ShardIndexService {
             mainIndex.flush();
 
             //通知load端重新加载
-            shardIndexLoadService.indexUpdate();
+            shardIndexLoadService.indexUpdate(null);
 
             log.info("索引更新结束：{}", System.currentTimeMillis() - start);
         } catch (Exception e) {
@@ -392,14 +393,12 @@ public class ShardIndexService {
      * @author Huangzq
      * @date 2022/12/14 17:54
      */
-    public void noticeSearcher() {
+    public void noticeSearcher(String path) {
         try {
             if (mainIndex != null) {
+
                 //mainIndex.flush();
-                long start = System.currentTimeMillis();
-                log.info("段合并开始{}",shardNum);
                 mainIndex.forceMerge(1);
-                log.info("段合并结束【{}】",System.currentTimeMillis()-start);
                 mainIndex.commit();
                 mainIndex.close();
             }
@@ -409,7 +408,7 @@ public class ShardIndexService {
         } catch (Exception e) {
             log.error("索引删除关闭失败：{}", e.getMessage(), e);
         }
-        shardIndexLoadService.indexUpdate();
+        shardIndexLoadService.indexUpdate(path);
     }
 
 

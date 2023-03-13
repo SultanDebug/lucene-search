@@ -20,9 +20,11 @@ import org.apache.lucene.search.*;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
+import org.springframework.util.StopWatch;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
 import javax.annotation.Resource;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -211,36 +213,79 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
 
     public static Query pinyinPhraseQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
         List<String> singleWordToken = getSingleWordComplexToken(query);
-
         PhraseQuery.Builder namePhs = new PhraseQuery.Builder();
-        PhraseQuery.Builder usedNamePhs = new PhraseQuery.Builder();
-        /*namePhs.setSlop(1);
-        usedNamePhs.setSlop(1);*/
+        //分词token少于3个不进行查询
+        if(singleWordToken.size()<3){
+            return namePhs.build();
+        }
         for (String token : singleWordToken) {
             String py = PinyinUtil.termToPinyin(token);
             namePhs.add(new Term("name_single_pinyin", py));
-            usedNamePhs.add(new Term("used_name_single_pinyin", py));
         }
 
         //条件过滤
         Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
 
-        //多字段匹配取最高得分
-        List<Query> pyList = new ArrayList<>();
-        pyList.add(namePhs.build());
-        pyList.add(usedNamePhs.build());
-        DisjunctionMaxQuery pyQueries = new DisjunctionMaxQuery(pyList, 0);
-
         if (conditionFilter == null) {
-            return pyQueries;
+            return namePhs.build();
         } else {
             BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
-            finalQuery.add(pyQueries, BooleanClause.Occur.MUST);
+            finalQuery.add(namePhs.build(), BooleanClause.Occur.MUST);
             finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
             return finalQuery.build();
         }
     }
 
+    public Query singleNameFuzzyQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap) {
+        List<String> querySingleToken = getSingleWordComplexToken(query);
+        PhraseQuery.Builder minQuery = new PhraseQuery.Builder();
+        StopWatch totalTime = new StopWatch();
+        List<String> tmpQueryToken = new ArrayList<>();
+        totalTime.start();
+        for(int i = -1; i < querySingleToken.size(); i++){
+            if(i == -1){
+                tmpQueryToken.addAll(querySingleToken);
+            }else {
+                int finalI = i;
+                tmpQueryToken = querySingleToken.stream().filter(item -> !item.equals(querySingleToken.get(finalI))).collect(Collectors.toList());
+            }
+            BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
+            for(String token:tmpQueryToken){
+                tmpQuery.add(new TermQuery(new Term("name_single", token)), BooleanClause.Occur.MUST);
+            }
+            try {
+                TopDocs prefixDocs = searcher.search(tmpQuery.build(), 1);
+                Long hits = prefixDocs.totalHits;
+                if(hits > 0){
+                    if(tmpQueryToken.size() < 5){
+                        minQuery.setSlop(1);
+                    }else {
+                        minQuery.setSlop(2);
+                    }
+                    for(String token:tmpQueryToken){
+                        minQuery.add(new Term("name_single", token));
+                    }
+                    break;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        totalTime.stop();
+        log.info("查询组合总耗时:{}", totalTime.getTotalTimeMillis());
+
+        //条件过滤
+        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
+
+        if (conditionFilter == null) {
+            return minQuery.build();
+        } else {
+            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
+            finalQuery.add(minQuery.build(), BooleanClause.Occur.MUST);
+            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
+            return finalQuery.build();
+        }
+    }
 
 
 
@@ -258,54 +303,6 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         }
         nameWordQuery.setMinimumNumberShouldMatch(minLength);
         userNameWordQuery.setMinimumNumberShouldMatch(minLength);
-
-        for (String token : singleWordToken) {
-            TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
-            nameWordQuery.add(termNameQuery, BooleanClause.Occur.SHOULD);
-            TermQuery termUserNameQuery = new TermQuery(new Term("used_name_pinyin", token));
-            userNameWordQuery.add(termUserNameQuery, BooleanClause.Occur.SHOULD);
-        }
-
-        //条件过滤
-        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
-
-        //多字段匹配取最高得分
-        List<Query> termList = new ArrayList<>();
-        termList.add(nameWordQuery.build());
-        termList.add(userNameWordQuery.build());
-        DisjunctionMaxQuery complexQueries = new DisjunctionMaxQuery(termList, 0);
-
-        if (conditionFilter == null) {
-            return complexQueries;
-        } else {
-            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
-            finalQuery.add(complexQueries, BooleanClause.Occur.MUST);
-            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
-            return finalQuery.build();
-        }
-    }
-
-
-    public Query ngramComplexFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap){
-        Query query1 = singleWordFuzzyQuery(query, filter, fieldMap);
-        Query query2 = ngramFuzzyQuery(query, filter, fieldMap);
-
-        BooleanQuery.Builder builder = new BooleanQuery.Builder();
-        builder.add(query1, BooleanClause.Occur.FILTER);
-        builder.add(query2, BooleanClause.Occur.MUST);
-
-        return builder.build();
-    }
-
-
-    public Query ngramFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
-        List<String> singleWordToken = getNGramToken(query);
-
-        BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
-        BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
-        int queryLength = singleWordToken.size();
-        nameWordQuery.setMinimumNumberShouldMatch(queryLength-1);
-        userNameWordQuery.setMinimumNumberShouldMatch(queryLength-1);
 
         for (String token : singleWordToken) {
             TermQuery termNameQuery = new TermQuery(new Term("name_pinyin", token));
@@ -383,23 +380,6 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         return new ArrayList<>();
     }
 
-    private List<String> getNGramToken(String query) {
-        try{
-            List<String> res = new ArrayList<>();
-            TokenStream tokenStream = ikAnalyzer.tokenStream("", query);
-            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
-            tokenStream.reset();//必须
-            while (tokenStream.incrementToken()) {
-                res.add(termAtt.toString());
-            }
-            tokenStream.close();//必须
-            return res;
-        } catch (Exception e) {
-            log.error("模糊查询分词异常：{}", query, e);
-        }
-        return new ArrayList<>();
-    }
-
 
     public static Query busIdQuery(String query) {
         return new TermQuery(new Term("company_id", query));
@@ -449,26 +429,20 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
     }
 
     @Override
-    public Pair<String , Query> buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
+    public Pair<String , Query> buildQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
         switch (type) {
             case COMPLEX_QUERY:
                 return Pair.of(COMPLEX_QUERY.getType(),singleWordComplexQuery(query, filter, fieldMap));
             case SINGLE_FUZZY_QUERY:
                 return Pair.of(SINGLE_FUZZY_QUERY.getType(),singleWordFuzzyQuery(query, filter, fieldMap));
+            case SINGLE_NAME_QUERY:
+                return Pair.of(SINGLE_NAME_QUERY.getType(),singleNameFuzzyQuery(searcher, query, filter, fieldMap));
             case PREFIX_QUERY:
                 return Pair.of(PREFIX_QUERY.getType(),sugQueryV2(query));
             case PINYIN_QUERY:
-                if(query.length()<4){
-                    return null;
-                }
                 return Pair.of(PINYIN_QUERY.getType(),pinyinPhraseQuery(query, filter, fieldMap));
             case FUZZY_QUERY:
                 return Pair.of(FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
-            case NGRAM_FUZZY_QUERY:
-                if(query.length()<6){
-                    return null;
-                }
-                return Pair.of(NGRAM_FUZZY_QUERY.getType(),ngramComplexFuzzyQuery(query, filter, fieldMap));
             default:
                 return Pair.of(DETAIL_BY_COMPANY_ID.getType(),busIdQuery(query));
         }

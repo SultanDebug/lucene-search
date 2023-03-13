@@ -1,13 +1,18 @@
 package com.hzq.search.service.shard;
 
 import com.google.common.collect.Lists;
+import com.hzq.search.analyzer.MySingleCharAnalyzer;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.enums.QueryTypeEnum;
 import com.hzq.search.service.shard.query.QueryBuildAbstract;
 import com.hzq.search.service.shard.query.QueryManager;
+import com.hzq.search.util.Position;
+import com.hzq.search.util.TextRelevance;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.Pair;
+import org.apache.lucene.analysis.TokenStream;
+import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
@@ -18,10 +23,7 @@ import org.apache.lucene.store.FSDirectory;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -41,6 +43,11 @@ public class ShardIndexLoadService {
      * 分片数量
      */
     private int shardNum;
+
+    /**
+     * 文件名称
+     */
+    private String fsPathName;
 
     /**
      * 文件索引地址
@@ -69,6 +76,7 @@ public class ShardIndexLoadService {
     public void setFsPath(String fsPath, int shardNum, String fsPathName) {
         this.fsPath = fsPath + File.separator + shardNum + File.separator + fsPathName;
         this.shardNum = shardNum;
+        this.fsPathName = fsPathName;
     }
 
     /**
@@ -79,7 +87,10 @@ public class ShardIndexLoadService {
      * @author Huangzq
      * @date 2022/12/6 19:12
      */
-    public void indexUpdate() {
+    public void indexUpdate(String path) {
+        if (StringUtils.isNotBlank(path)) {
+            this.setFsPath(path, shardNum, fsPathName);
+        }
         if (StringUtils.isBlank(fsPath)) {
             log.error("索引参数未配置！");
             return;
@@ -169,13 +180,13 @@ public class ShardIndexLoadService {
             log.error("参数{}，{}异常或未注册", type, index);
             return Lists.newArrayList();
         }
-        if(StringUtils.isEmpty(query) || query.matches(".*[a-zA-z].*") || query.matches(".*[0-9].*")){
+        if (StringUtils.isEmpty(query) || query.matches(".*[a-zA-z].*") || query.matches(".*[0-9].*")) {
             //log.error("参数{}含字母或数字，不支持处理", query);
             return Lists.newArrayList();
         }
-        Pair<String , Query> queryPair = queryBuild.buildQuery(query, filter, fieldMap, queryTypeEnum);
+        Pair<String, Query> queryPair = queryBuild.buildQuery(searcher, query, filter, fieldMap, queryTypeEnum);
 
-        if(queryPair == null){
+        if (queryPair == null) {
             return Lists.newArrayList();
         }
 
@@ -183,7 +194,6 @@ public class ShardIndexLoadService {
 
         Sort sort = new Sort(new SortField(null, SortField.Type.SCORE, false),
                 new SortField("company_score", SortField.Type.DOUBLE, true));
-
         TopDocs prefixDocs = searcher.search(queryPair.getRight(), recallSize, sort, true, false);
 
         totle.addAndGet(prefixDocs.totalHits);
@@ -199,6 +209,9 @@ public class ShardIndexLoadService {
                 map.put("explain", searcher.explain(queryPair.getRight(), scoreDoc.doc).toString());
             }
             map.put("data_type", queryPair.getLeft());
+//            if(!reScore(query, doc.get("name"), map)){
+//                continue;
+//            }
             fieldMap.values().stream()
                     .filter(o -> o.getStored() == 1)
                     .forEach(o -> map.put(o.getFieldName(), doc.get(o.getFieldName())));
@@ -206,5 +219,72 @@ public class ShardIndexLoadService {
         }
 
         return list;
+    }
+
+    private static boolean reScore(String query, String name, Map<String, String> map) {
+        Long score = 0L;
+        TextRelevance trie = new TextRelevance();
+        List<String> tokens = getSingleWordToken(query);
+        Set<String> segments = new HashSet<>(tokens);
+        for (String token : segments) {
+            if (!org.springframework.util.StringUtils.isEmpty(token)) {
+                trie.addKeyword(token);
+            }
+        }
+        Map<String, List<Position>> termPostionMap = new HashMap<>();
+        trie.parsetText4Pos(name, (begin, end, emit) -> termPostionMap.computeIfAbsent(emit, t -> new ArrayList<>()).add(new Position(1, begin)));
+        int matchCount = 0;
+        int distance = 5;
+        int prePosition = 0;
+        for (String token : tokens) {
+            if (termPostionMap.containsKey(token)) {
+                matchCount++;
+                List<Position> matchs = termPostionMap.get(token);
+                if (matchCount == 1) {
+                    prePosition = matchs.stream().map(Position::getOffset).min(Comparator.comparing(Integer::intValue)).orElse(0);
+                    continue;
+                }
+                int finalPrePosition = prePosition;
+                int slop = matchs.stream().map(item -> Math.abs(item.getOffset() - finalPrePosition)).min(Comparator.comparing(Integer::intValue)).orElse(0);
+                prePosition = slop + prePosition;
+                if (slop != 1) {
+                    distance--;
+                }
+                if (distance <= 0) {
+                    break;
+                }
+            }
+        }
+        if (tokens.size() - matchCount <= 2 && distance >= 0) {
+            score = score | (long) 5 << 52;
+            score = score | (long) (7 - (tokens.size() - matchCount)) << 48;
+            score = score | (long) distance << 44;
+            map.put("score", String.valueOf(score));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static List<String> getSingleWordToken(String query) {
+        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()) {
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = analyzer.tokenStream("", query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+            return res;
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
+        }
+        return new ArrayList<>();
+    }
+
+    public static void main(String[] args) {
+        Map<String, String> termPostionMap = new HashMap<>();
+        reScore("东莞明翔智能科技有限公司", "东莞市明鑫翔智能科技有限公司", termPostionMap);
     }
 }

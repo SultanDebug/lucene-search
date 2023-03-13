@@ -1,6 +1,8 @@
 package com.hzq.search.service;
 
 
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.config.IndexConfig;
 import com.hzq.search.config.IndexShardConfig;
@@ -25,7 +27,6 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public abstract class IndexCommonAbstract {
-
     static final int NO_EXISTS = 0;
     static final int MAIN_INDEX = 1;
     static final int ALIA_INDEX = 2;
@@ -78,24 +79,36 @@ public abstract class IndexCommonAbstract {
         Map<String, FieldDef> fieldMap = indexShardConfig.getFieldMap();
 
         //缓存当前索引，区分是主索引还是别名索引，来回切换
-        Integer currentIndexInfo = CUR_INDEX_MAP.computeIfAbsent(index, s -> getCurrentIndexInfo(switchIndex));
-        String mainPath = null;
+
+        //初始化索引地址
+        String indexPath = null;
+        String searchPath = null;
+
+        Integer currentIndexInfo = MAIN_INDEX;
+        JSONObject switchMap = this.getCurrentIndexInfo(switchIndex);
+        if (switchMap != null && switchMap.containsKey(index)) {
+            currentIndexInfo = switchMap.getInteger(index);
+            searchPath = currentIndexInfo.equals(MAIN_INDEX) ? fsPath : aliaPath;
+        } else {
+            searchPath = aliaPath;
+        }
+
         if (isInit) {
             CUR_INDEX_MAP.put(index, currentIndexInfo.equals(MAIN_INDEX) ? ALIA_INDEX : MAIN_INDEX);
-            mainPath = currentIndexInfo.equals(MAIN_INDEX) ? aliaPath : fsPath;
+            indexPath = currentIndexInfo.equals(MAIN_INDEX) ? aliaPath : fsPath;
         } else {
-            mainPath = currentIndexInfo.equals(MAIN_INDEX) ? fsPath : aliaPath;
+            indexPath = searchPath;
         }
 
         Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> map = new HashMap<>();
         for (int i = 0; i < shardNum; i++) {
             ShardIndexLoadService loadService = new ShardIndexLoadService();
             loadService.setShardNum(i, recallSize);
-            loadService.setFsPath(mainPath, i, fsPathName);
+            loadService.setFsPath(searchPath, i, fsPathName);
             ShardIndexService service = new ShardIndexService();
             service.setShardNum(i);
             service.setShardIndexLoadService(loadService);
-            service.setFsPath(mainPath, i, fsPathName);
+            service.setFsPath(indexPath, i, fsPathName);
             service.setFieldConfigs(fieldMap);
             map.put(i, Pair.of(service, loadService));
         }
@@ -103,9 +116,9 @@ public abstract class IndexCommonAbstract {
         return true;
     }
 
-    public Integer getCurrentIndexInfo(String path) {
+    public JSONObject getCurrentIndexInfo(String path) {
         File file = new File(path);
-        int res = NO_EXISTS;
+        JSONObject res = null;
         if (file.exists()) {
             try (
                     FileInputStream fis = new FileInputStream(file);
@@ -113,9 +126,18 @@ public abstract class IndexCommonAbstract {
                     BufferedReader br = new BufferedReader(isr);
             ) {
                 String dataLine = "";
+                StringBuilder buffer = new StringBuilder();
                 while ((dataLine = br.readLine()) != null) {
-                    res = Integer.parseInt(dataLine);
+                    buffer.append(dataLine);
                 }
+                //兼容处理
+                if ("1".equals(buffer.toString()) || "2".equals(buffer.toString())) {
+                    file.delete();
+                    log.info("兼容处理，删除索引记录：{}", buffer);
+                    return null;
+                }
+
+                res = JSON.parseObject(buffer.toString());
                 log.info("当前索引信息：{}", res);
                 return res;
             } catch (Exception e) {
@@ -142,7 +164,7 @@ public abstract class IndexCommonAbstract {
     }
 
 
-    public boolean saveCurrentIndexInfo(String index, Integer cur) {
+    public boolean saveCurrentIndexInfo(String index, String update) {
         //校验是否配置
         Map<String, IndexShardConfig> indexMap = indexConfig.getIndexMap();
         IndexShardConfig indexShardConfig = indexMap.get(index);
@@ -155,11 +177,11 @@ public abstract class IndexCommonAbstract {
 
         File file = new File(switchIndex);
         try (FileWriter writer = new FileWriter(file)) {
-            writer.write(String.valueOf(cur));
+            writer.write(update);
             writer.flush();
             return true;
         } catch (Exception e) {
-            log.error("索引记录文件写入失败:{},{}", cur, switchIndex);
+            log.error("索引记录文件写入失败:{},{}", update, switchIndex);
         }
         return false;
     }

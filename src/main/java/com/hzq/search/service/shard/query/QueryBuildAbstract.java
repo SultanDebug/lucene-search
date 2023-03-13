@@ -11,10 +11,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.Term;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
-import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
+import org.apache.lucene.search.*;
 
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -99,5 +96,5 @@ public abstract class QueryBuildAbstract {
         return keyFlag.get() ? filterCondition.build() : null;
     }
 
-    public abstract Pair<String , Query> buildQuery(String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type);
+    public abstract Pair<String , Query> buildQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type);
 }
