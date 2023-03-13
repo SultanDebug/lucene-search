@@ -1,21 +1,17 @@
 package com.hzq.search.controller;
 
-import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
 import com.hzq.search.service.ResultResponse;
 import com.hzq.search.service.ShardIndexMergeLoadService;
 import com.hzq.search.service.ShardIndexMergeService;
+import io.swagger.annotations.Api;
+import io.swagger.annotations.ApiImplicitParam;
+import io.swagger.annotations.ApiImplicitParams;
+import io.swagger.annotations.ApiOperation;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.lucene.analysis.TokenStream;
-import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
-import org.apache.lucene.analysis.tokenattributes.OffsetAttribute;
-import org.apache.lucene.analysis.tokenattributes.PositionIncrementAttribute;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.web.bind.annotation.*;
-import org.wltea.analyzer.lucene.IKAnalyzer;
 
-import java.io.StringReader;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +35,7 @@ import java.util.concurrent.Semaphore;
  * @author Huangzq
  * @date 2022/11/17 19:49
  */
+@Api(tags = "分片索引接口")
 @RestController
 @Slf4j
 @Scope
@@ -46,58 +43,34 @@ public class ShardController {
     @Autowired
     private ShardIndexMergeLoadService shardIndexMergeLoadService;
 
-
     @Autowired
     private ShardIndexMergeService shardIndexMergeService;
-
-    @GetMapping(value = "/shard/py-analyzer")
-    public ResultResponse<List<String>> pyAnalyzer(@RequestParam("smart") Boolean smart, @RequestParam("query") String query) throws Exception {
-        MyCnPinyinAnalyzer ikAnalyzer = new MyCnPinyinAnalyzer(smart);
-        TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
-        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
-        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
-        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
-        tokenStream.reset();//必须
-        List<String> res = new ArrayList<>();
-        while (tokenStream.incrementToken()) {
-            res.add(termAtt.toString() + ":" + offsetAttribute.startOffset() + "/" + offsetAttribute.endOffset() + "==>" + positionIncrementAttribute.getPositionIncrement());
-        }
-        tokenStream.close();//必须
-        ikAnalyzer.close();
-        return ResultResponse.success(res);
-    }
-
-    @GetMapping(value = "/shard/ik-analyzer")
-    public ResultResponse<List<String>> ikAnalyzer(@RequestParam("smart") Boolean smart, @RequestParam("query") String query) throws Exception {
-        IKAnalyzer ikAnalyzer = new IKAnalyzer(smart);
-        TokenStream tokenStream = ikAnalyzer.tokenStream("hzq", new StringReader(query));
-        CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
-        OffsetAttribute offsetAttribute = tokenStream.addAttribute(OffsetAttribute.class);
-        PositionIncrementAttribute positionIncrementAttribute = tokenStream.addAttribute(PositionIncrementAttribute.class);
-        tokenStream.reset();//必须
-        List<String> res = new ArrayList<>();
-        while (tokenStream.incrementToken()) {
-            res.add(termAtt.toString() + ":" + offsetAttribute.startOffset() + "/" + offsetAttribute.endOffset() + "==>" + positionIncrementAttribute.getPositionIncrement());
-        }
-        tokenStream.close();//必须
-        ikAnalyzer.close();
-        return ResultResponse.success(res);
-    }
 
     /**
      * 查询接口
      *
-     * @param index 索引名称
-     * @param query 搜索词
-     * @param filter 过滤条件，json串  格式详见文档
-     * @param size 页大小 默认20
-     * @param page 页数 默认0：第一页
+     * @param index   索引名称
+     * @param query   搜索词
+     * @param filter  过滤条件，json串  格式详见文档
+     * @param size    页大小 默认20
+     * @param page    页数 默认0：第一页
      * @param explain 解释，默认不解释  true-是   false-否
-     * @param type 查询方式，默认模糊查询：detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，拼音短语及汉字单字大部分匹配
+     * @param type    查询方式，默认模糊查询：detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，拼音短语及汉字单字大部分匹配
+     *                complex fuzzy  single_fuzzy  pinyin single_name
      * @return
      * @author Huangzq
      * @date 2023/2/21 11:10
      */
+    @ApiOperation(value = "搜索接口")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true),
+            @ApiImplicitParam(paramType = "query", name = "query", value = "搜索词", required = true),
+            @ApiImplicitParam(paramType = "query", name = "filter", value = "过滤条件", required = true),
+            @ApiImplicitParam(paramType = "query", name = "size", value = "页大小", required = true),
+            @ApiImplicitParam(paramType = "query", name = "page", value = "页码", required = true),
+            @ApiImplicitParam(paramType = "query", name = "explain", value = "是否解析", required = true),
+            @ApiImplicitParam(paramType = "query", name = "type", value = "查询方式detail-companyid查询  prefix-精确查询，前缀、term  fuzzy-模糊查询  complex-复合查询，single_name-term优化模糊查询，拼音短语及汉字单字大部分匹配", required = true),
+    })
     @GetMapping(value = "/shard/query")
     public ResultResponse<Map<String, Object>> query(@RequestParam("index") String index,
                                                      @RequestParam("query") String query,
@@ -110,33 +83,39 @@ public class ShardController {
         return ResultResponse.success(name);
     }
 
-    public static ConcurrentMap<String,Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
+    public static ConcurrentMap<String, Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
 
+    @ApiOperation(value = "索引创建")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
+    })
     @GetMapping(value = "/shard/create")
     public ResultResponse<List<String>> create(@RequestParam("index") String index) {
-        Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index,s -> new Semaphore(1));
-        if(semaphore.tryAcquire()){
+        Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
+        if (semaphore.tryAcquire()) {
             try {
                 List<String> list = shardIndexMergeService.initShardIndexForPage(index);
                 return ResultResponse.success(list);
-            }catch (Exception e) {
-                log.error("索引生成失败",e);
-                return ResultResponse.fail("101","索引生成失败，稍后再试");
-            }finally {
+            } catch (Exception e) {
+                log.error("索引生成失败", e);
+                return ResultResponse.fail("101", "索引生成失败，稍后再试");
+            } finally {
                 semaphore.release();
             }
-        }else{
-            return ResultResponse.fail("101","索引生成中，勿重复提交");
+        } else {
+            return ResultResponse.fail("101", "索引生成中，勿重复提交");
         }
     }
 
     @PostMapping(value = "/shard/add/{index}")
+    @Deprecated
     public ResultResponse<String> add(@PathVariable("index") String index, @RequestBody Map<String, Object> data) {
         shardIndexMergeService.addIndex(index, data);
         return ResultResponse.success();
     }
 
     @GetMapping(value = "/shard/merge")
+    @Deprecated
     public ResultResponse<String> merge(@RequestParam("index") String index) {
         shardIndexMergeService.indexMerge(index);
         return ResultResponse.success();

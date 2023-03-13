@@ -3,33 +3,33 @@ spring:
     name: lucene-search
   jackson:
     default-property-inclusion: non_null # 忽略null的值
-#  cloud:
-#    #    inetutils:
-#    #      preferred-networks: 172.16
-#    nacos:
-#      discovery:
-#        server-addr: ${NACOS_SERVER_ADDR:ip:port}
-#        namespace: ${NACOS_SERVER_NAMESPACE:namespace}
-#        username: ${NACOS_SERVER_USERNAME:}
-#        password: ${NACOS_SERVER_PASSWORD:}
-#        access-key: ${NACOS_ACCESSKEY_ID:}
-#        secret-key: ${NACOS_ACCESSKEY_SECRET:}
-#        group: search
-#      config:
-#        enabled: true
-#        #服务器地址
-#        server-addr: ${spring.cloud.nacos.discovery.server-addr:ip:port}
-#        #指定配置群组 --如果是DEFAULT_GROUP组 则可以省略群组配置
-#        group: search
-#        #文件名 -- 如果没有配置则默认为 ${spring.appliction.name}
-#        #prefix: nacos-admin
-#        #指定文件后缀
-#        file-extension: yaml
-#        namespace: ${spring.cloud.nacos.discovery.namespace:namespace}
-#        username: ${spring.cloud.nacos.discovery.username}
-#        password: ${spring.cloud.nacos.discovery.password}
-#        access-key: ${spring.cloud.nacos.discovery.access-key}
-#        secret-key: ${spring.cloud.nacos.discovery.secret-key}
+  cloud:
+    #    inetutils:
+    #      preferred-networks: 172.16
+    nacos:
+      discovery:
+        server-addr: ${NACOS_SERVER_ADDR:IP:port}
+        namespace: ${NACOS_SERVER_NAMESPACE:namespace}
+        username: ${NACOS_SERVER_USERNAME:}
+        password: ${NACOS_SERVER_PASSWORD:}
+        access-key: ${NACOS_ACCESSKEY_ID:}
+        secret-key: ${NACOS_ACCESSKEY_SECRET:}
+        group: search
+      config:
+        enabled: true
+        #服务器地址
+        server-addr: ${spring.cloud.nacos.discovery.server-addr:IP:port}
+        #指定配置群组 --如果是DEFAULT_GROUP组 则可以省略群组配置
+        group: search
+        #文件名 -- 如果没有配置则默认为 ${spring.appliction.name}
+        #prefix: nacos-admin
+        #指定文件后缀
+        file-extension: yaml
+        namespace: ${spring.cloud.nacos.discovery.namespace:namespace}
+        username: ${spring.cloud.nacos.discovery.username}
+        password: ${spring.cloud.nacos.discovery.password}
+        access-key: ${spring.cloud.nacos.discovery.access-key}
+        secret-key: ${spring.cloud.nacos.discovery.secret-key}
 
 server:
   port: 8888
@@ -87,3 +87,6 @@ management:
 
 logging:
   config: classpath:log4j2.xml
+  #取消get changedGroupKeys心跳日志
+  level:
+    com.alibaba.nacos.client.*: warn
