@@ -3,6 +3,7 @@ package com.hzq.search.controller;
 import com.hzq.search.service.ResultResponse;
 import com.hzq.search.service.ShardIndexMergeLoadService;
 import com.hzq.search.service.ShardIndexMergeService;
+import com.hzq.search.service.shard.IndexInfoService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Scope;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -45,6 +47,9 @@ public class ShardController {
 
     @Autowired
     private ShardIndexMergeService shardIndexMergeService;
+
+    @Autowired
+    private IndexInfoService indexInfoService;
 
     /**
      * 查询接口
@@ -105,6 +110,32 @@ public class ShardController {
         } else {
             return ResultResponse.fail("101", "索引生成中，勿重复提交");
         }
+    }
+
+    @ApiOperation(value = "索引状态查询")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
+    })
+    @GetMapping(value = "/shard/status")
+    public ResultResponse<Map<String,String>> status(@RequestParam("index") String index) {
+        Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
+
+        Map<String,String> map = new HashMap<>();
+        if (semaphore.tryAcquire()) {
+            try {
+                map.put("lock","锁空闲");
+            } catch (Exception e) {
+                log.error("位置异常", e);
+            } finally {
+                semaphore.release();
+            }
+        } else {
+            map.put("lock","索引生成中");
+        }
+
+        indexInfoService.getCurIndex(index,map);
+
+        return ResultResponse.success(map);
     }
 
     @PostMapping(value = "/shard/add/{index}")

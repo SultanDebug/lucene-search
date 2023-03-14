@@ -52,7 +52,10 @@ public class NodeOperationController {
         Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
         if (semaphore.tryAcquire()) {
             try {
-                return ResultResponse.success(syncData(index));
+                ParameterizedTypeReference<ResultResponse<List<String>>> classType =
+                        new ParameterizedTypeReference<ResultResponse<List<String>>>() {
+                        };
+                return ResultResponse.success(syncData(index,"/shard/create",classType));
             } catch (Exception e) {
                 log.error("节点索引生成失败", e);
                 return ResultResponse.fail("101", "节点索引生成失败，稍后再试");
@@ -64,6 +67,19 @@ public class NodeOperationController {
         }
     }
 
+
+    @ApiOperation(value = "节点索引创建状态查询")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
+    })
+    @GetMapping(value = "/node/index-status")
+    public ResultResponse<Map<String, String>> status(@RequestParam("index") String index) {
+        ParameterizedTypeReference<ResultResponse<Map<String,String>>> classType =
+                new ParameterizedTypeReference<ResultResponse<Map<String,String>>>() {
+                };
+        return ResultResponse.success(syncData(index,"/shard/status",classType));
+    }
+
     @Resource
     private DiscoveryClient discoveryClient;
 
@@ -73,28 +89,25 @@ public class NodeOperationController {
     /**
      * 同步实例数据线程池
      */
-    private static ExecutorService EXECUTOR_SERVICE = new ThreadPoolExecutor(2, 10,
+    private static ExecutorService EXECUTOR_SERVICE = new ThreadPoolExecutor(2, 100,
             0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>());
 
-    private Map<String, String> syncData(String index) {
+    private <T> Map<String, String> syncData(String index , String path , ParameterizedTypeReference<ResultResponse<T>> classType) {
         Map<String, String> result = new HashMap<>();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         //日志链路id衔接
         headers.set(TRACE_ID, MDC.get(TRACE_ID));
-        List<ServiceInstance> instances = discoveryClient.getInstances("lucene-search");
+        List<ServiceInstance> instances = discoveryClient.getInstances("bird-search-multirecall");
 
         List<AsynUtil.TaskExecute> taskExecutes = instances.stream().map(instance -> (AsynUtil.TaskExecute) () -> {
             String url =
-                    "http://" + instance.getHost() + ":" + instance.getPort() + "/shard/create" + "?index=" + index;
+                    "http://" + instance.getHost() + ":" + instance.getPort() + path + "?index=" + index;
             log.info("实例{}同步开始", instance.getUri().toString());
             try {
                 HttpEntity<String> httpEntity = new HttpEntity<>("", headers);
-                ParameterizedTypeReference<ResultResponse<List<String>>> classType =
-                        new ParameterizedTypeReference<ResultResponse<List<String>>>() {
-                        };
-                ResponseEntity<ResultResponse<List<String>>> forEntity = restTemplate.exchange(url, HttpMethod.GET,
+                ResponseEntity<ResultResponse<T>> forEntity = restTemplate.exchange(url, HttpMethod.GET,
                         httpEntity, classType);
                 if (Objects.requireNonNull(forEntity.getBody()).getCode().equals("200")) {
                     log.info("调用成功{}", instance.getUri().toString());

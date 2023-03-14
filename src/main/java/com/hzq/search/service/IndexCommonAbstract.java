@@ -28,8 +28,8 @@ import java.util.concurrent.TimeUnit;
 @Slf4j
 public abstract class IndexCommonAbstract {
     static final int NO_EXISTS = 0;
-    static final int MAIN_INDEX = 1;
-    static final int ALIA_INDEX = 2;
+    public static final int MAIN_INDEX = 1;
+    public static final int ALIA_INDEX = 2;
     public static ExecutorService executorService = new ThreadPoolExecutor(100,
             1000,
             0L,
@@ -85,7 +85,7 @@ public abstract class IndexCommonAbstract {
         String searchPath = null;
 
         Integer currentIndexInfo = MAIN_INDEX;
-        JSONObject switchMap = this.getCurrentIndexInfo(switchIndex);
+        JSONObject switchMap = getCurrentIndexInfo(switchIndex);
         if (switchMap != null && switchMap.containsKey(index)) {
             currentIndexInfo = switchMap.getInteger(index);
             searchPath = currentIndexInfo.equals(MAIN_INDEX) ? fsPath : aliaPath;
@@ -116,7 +116,7 @@ public abstract class IndexCommonAbstract {
         return true;
     }
 
-    public JSONObject getCurrentIndexInfo(String path) {
+    public static JSONObject getCurrentIndexInfo(String path) {
         File file = new File(path);
         JSONObject res = null;
         if (file.exists()) {
