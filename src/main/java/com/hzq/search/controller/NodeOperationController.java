@@ -1,6 +1,5 @@
 package com.hzq.search.controller;
 
-import com.alibaba.fastjson.JSON;
 import com.hzq.search.service.ResultResponse;
 import com.hzq.search.util.AsynUtil;
 import io.swagger.annotations.Api;
@@ -48,14 +47,14 @@ public class NodeOperationController {
             @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
     })
     @GetMapping(value = "/node/index-create")
-    public ResultResponse<Map<String, String>> create(@RequestParam("index") String index) {
+    public ResultResponse<Map<String, Object>> create(@RequestParam("index") String index) {
         Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
         if (semaphore.tryAcquire()) {
             try {
                 ParameterizedTypeReference<ResultResponse<List<String>>> classType =
                         new ParameterizedTypeReference<ResultResponse<List<String>>>() {
                         };
-                return ResultResponse.success(syncData(index,"/shard/create",classType));
+                return ResultResponse.success(syncData(index, "/shard/create", classType));
             } catch (Exception e) {
                 log.error("节点索引生成失败", e);
                 return ResultResponse.fail("101", "节点索引生成失败，稍后再试");
@@ -73,11 +72,11 @@ public class NodeOperationController {
             @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
     })
     @GetMapping(value = "/node/index-status")
-    public ResultResponse<Map<String, String>> status(@RequestParam("index") String index) {
-        ParameterizedTypeReference<ResultResponse<Map<String,String>>> classType =
-                new ParameterizedTypeReference<ResultResponse<Map<String,String>>>() {
+    public ResultResponse<Map<String, Object>> status(@RequestParam("index") String index) {
+        ParameterizedTypeReference<ResultResponse<Map<String, Object>>> classType =
+                new ParameterizedTypeReference<ResultResponse<Map<String, Object>>>() {
                 };
-        return ResultResponse.success(syncData(index,"/shard/status",classType));
+        return ResultResponse.success(syncData(index, "/shard/status", classType));
     }
 
     @Resource
@@ -93,8 +92,8 @@ public class NodeOperationController {
             0L, TimeUnit.MILLISECONDS,
             new LinkedBlockingQueue<>());
 
-    private <T> Map<String, String> syncData(String index , String path , ParameterizedTypeReference<ResultResponse<T>> classType) {
-        Map<String, String> result = new HashMap<>();
+    private <T> Map<String, Object> syncData(String index, String path, ParameterizedTypeReference<ResultResponse<T>> classType) {
+        Map<String, Object> result = new HashMap<>();
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         //日志链路id衔接
@@ -115,7 +114,7 @@ public class NodeOperationController {
                     log.info("调用失败{}", instance.getUri().toString());
                 }
 
-                result.put(instance.getHost(), JSON.toJSONString(forEntity.getBody()));
+                result.put(instance.getHost(), forEntity.getBody());
             } catch (Exception e) {
                 log.error("同步{}异常：{}", instance.getUri().toString(), e.getMessage());
             }
