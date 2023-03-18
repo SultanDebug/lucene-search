@@ -1,4 +1,4 @@
-package com.hzq.search;
+package com.hzq;
 
 import com.hankcs.hanlp.HanLP;
 import com.hankcs.hanlp.dictionary.py.Pinyin;

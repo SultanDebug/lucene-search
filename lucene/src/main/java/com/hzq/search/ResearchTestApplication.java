@@ -16,8 +16,8 @@ public class ResearchTestApplication {
     public static void main(String[] args) {
         try {
             SpringApplication.run(ResearchTestApplication.class, args);
-        }catch (Throwable throwable){
-            log.error("启动异常",throwable);
+        } catch (Throwable throwable) {
+            log.error("启动异常", throwable);
         }
     }
 
