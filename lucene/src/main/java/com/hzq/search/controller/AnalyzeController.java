@@ -1,7 +1,7 @@
 package com.hzq.search.controller;
 
 import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
-import com.hzq.search.service.ResultResponse;
+import com.hzq.common.dto.ResultResponse;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;

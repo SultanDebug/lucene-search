@@ -1,6 +1,6 @@
 package com.hzq.search.controller;
 
-import com.hzq.search.service.ResultResponse;
+import com.hzq.common.dto.ResultResponse;
 import com.hzq.search.util.AsynUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;

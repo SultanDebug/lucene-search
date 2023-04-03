@@ -1,4 +1,4 @@
-package com.hzq.search.config;
+package com.hzq.common.config;
 
 import io.swagger.annotations.ApiOperation;
 import org.springframework.context.annotation.Bean;
@@ -19,7 +19,7 @@ public class Knife4jConfiguration {
                 .apiInfo(new ApiInfoBuilder()
                         //.title("swagger-bootstrap-ui-demo RESTful APIs")
                         .description("# BIRD INCREMENT PLATFORM RESTful APIs")
-                        .termsOfServiceUrl("https://www.qizhidao.com/")
+                        .termsOfServiceUrl("https://domain/")
                         .version("1.0")
                         .build())
                 //分组名称

@@ -1,0 +1,74 @@
+spring:
+  application:
+    name: elastic-search
+  jackson:
+    default-property-inclusion: non_null # 忽略null的值
+
+
+es:
+  cluster:
+    name: my-application
+  host:
+    ip: 192.168.118.128
+    port: 9200
+
+
+server:
+  port: 8888
+  tomcat:
+    threads:
+      max: 800
+      min-spare: 100
+    accept-count: 1000
+
+
+management:
+  #  security:
+  #    enabled: false
+  endpoints:
+    web:
+      exposure:
+        include: "info,health,prometheus"
+  endpoint:
+    health:
+      show-details: never
+    shutdown:
+      enabled: false
+
+#feign:
+#  hystrix:
+#    enabled: true
+#  httpclient:
+#    enabled: true
+#    #就是httpclient的配置，配置最大连接数
+#    max-connections: 1000
+#    max-connections-per-route: 1000
+#    connection-timeout: 50
+#  client:
+#    config:
+#      default:
+#        read-timeout: 1000
+#        connect-timeout: 100
+
+#ribbon:
+#  #饥饿加载
+#  eager-load:
+#    # 是否开启饥饿加载
+#    enabled: true
+#
+#hystrix:
+#  command:
+#    general-search:
+#      execution:
+#        isolation:
+#          thread:
+#            ##########################################Hystrix的超时时⻓设置
+#            timeoutInMilliseconds: 5000 #默认1000ms
+#  threadpool:
+
+
+logging:
+  config: classpath:log4j2.xml
+  #取消get changedGroupKeys心跳日志
+  level:
+    com.alibaba.nacos.client.*: warn

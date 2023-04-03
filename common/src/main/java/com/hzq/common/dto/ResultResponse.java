@@ -1,4 +1,4 @@
-package com.hzq.search.service;
+package com.hzq.common.dto;
 
 import lombok.Data;
 
