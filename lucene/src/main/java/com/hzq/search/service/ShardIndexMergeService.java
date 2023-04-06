@@ -184,10 +184,9 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
             List<AsynUtil.TaskExecute> collect = SHARD_INDEX_MAP.get(index).values().stream()
                     .map(o -> (AsynUtil.TaskExecute) () -> o.getLeft().noticeSearcher(searchPath))
                     .collect(Collectors.toList());
-            log.info("段合并结束【{}】", System.currentTimeMillis() - start);
-
             AsynUtil.executeSync(executorService, collect);
 
+            log.info("段合并结束【{}】", System.currentTimeMillis() - start);
             //保存当前索引信息
             this.saveCurrentIndexInfo(index, JSON.toJSONString(CUR_INDEX_MAP));
 
