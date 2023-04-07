@@ -4,6 +4,8 @@ spring:
   jackson:
     default-property-inclusion: non_null # 忽略null的值
 
+plugin:
+  path: ./plugin
 
 es:
   cluster:

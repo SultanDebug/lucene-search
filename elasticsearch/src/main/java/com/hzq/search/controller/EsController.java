@@ -1,13 +1,10 @@
 package com.hzq.search.controller;
 
-import com.alibaba.fastjson.JSON;
-import com.alibaba.fastjson.JSONArray;
-import com.alibaba.fastjson.JSONObject;
 import com.hzq.common.dto.ResultResponse;
 import com.hzq.search.service.EsService;
+import com.hzq.search.service.plugin.PluginService;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.search.SearchHit;
-import org.elasticsearch.search.SearchHits;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -27,6 +24,9 @@ public class EsController {
     @Autowired
     private EsService esService;
 
+    @Autowired
+    private PluginService pluginService;
+
     @GetMapping("/es/query")
     public ResultResponse<List<Map<String, Object> >> query(@RequestParam("query") String query) {
         SearchResponse query1 = esService.query();
@@ -37,5 +37,11 @@ public class EsController {
         }
 
         return ResultResponse.success(list);
+    }
+
+
+    @GetMapping("/es/plugin")
+    public ResultResponse<String> plugin(@RequestParam("query") String query) throws Exception {
+        return ResultResponse.success(pluginService.load());
     }
 }
