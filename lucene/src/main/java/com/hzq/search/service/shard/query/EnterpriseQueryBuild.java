@@ -1,9 +1,11 @@
 package com.hzq.search.service.shard.query;
 
+import com.alibaba.fastjson.JSONObject;
 import com.hzq.search.analyzer.MyCnPinyinAnalyzer;
 import com.hzq.search.analyzer.MySingleCharAnalyzer;
 import com.hzq.search.config.FieldDef;
 import com.hzq.search.enums.QueryTypeEnum;
+import com.hzq.search.util.PinyinAlphabetTokenizer;
 import com.hzq.search.util.PinyinUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -19,11 +21,9 @@ import org.apache.lucene.queryparser.classic.QueryParser;
 import org.apache.lucene.search.*;
 import org.springframework.beans.factory.InitializingBean;
 import org.springframework.stereotype.Component;
-import org.springframework.util.CollectionUtils;
 import org.springframework.util.StopWatch;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
-import javax.annotation.Resource;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -212,10 +212,14 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
 
 
     public static Query pinyinPhraseQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
-        List<String> singleWordToken = getSingleWordComplexToken(query);
+        List<String> singleWordToken = getSingleWordComplexToken(query)
+                .stream()
+                .map(o -> PinyinAlphabetTokenizer.walk(PinyinUtil.termToPinyin(o)))
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
         PhraseQuery.Builder namePhs = new PhraseQuery.Builder();
         //分词token少于3个不进行查询
-        if(singleWordToken.size()<3){
+        if (singleWordToken.size() < 3) {
             return namePhs.build();
         }
         for (String token : singleWordToken) {
@@ -235,59 +239,6 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
             return finalQuery.build();
         }
     }
-
-    public Query singleNameFuzzyQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap) {
-        List<String> querySingleToken = getSingleWordComplexToken(query);
-        PhraseQuery.Builder minQuery = new PhraseQuery.Builder();
-        StopWatch totalTime = new StopWatch();
-        List<String> tmpQueryToken = new ArrayList<>();
-        totalTime.start();
-        for(int i = -1; i < querySingleToken.size(); i++){
-            if(i == -1){
-                tmpQueryToken.addAll(querySingleToken);
-            }else {
-                int finalI = i;
-                tmpQueryToken = querySingleToken.stream().filter(item -> !item.equals(querySingleToken.get(finalI))).collect(Collectors.toList());
-            }
-            BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
-            for(String token:tmpQueryToken){
-                tmpQuery.add(new TermQuery(new Term("name_single", token)), BooleanClause.Occur.MUST);
-            }
-            try {
-                TopDocs prefixDocs = searcher.search(tmpQuery.build(), 1);
-                Long hits = prefixDocs.totalHits;
-                if(hits > 0){
-                    if(tmpQueryToken.size() < 5){
-                        minQuery.setSlop(1);
-                    }else {
-                        minQuery.setSlop(2);
-                    }
-                    for(String token:tmpQueryToken){
-                        minQuery.add(new Term("name_single", token));
-                    }
-                    break;
-                }
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        totalTime.stop();
-        log.info("查询组合总耗时:{}", totalTime.getTotalTimeMillis());
-
-        //条件过滤
-        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
-
-        if (conditionFilter == null) {
-            return minQuery.build();
-        } else {
-            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
-            finalQuery.add(minQuery.build(), BooleanClause.Occur.MUST);
-            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
-            return finalQuery.build();
-        }
-    }
-
-
 
     public static Query singleWordFuzzyQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
         List<String> singleWordToken = getSingleWordComplexToken(query);
@@ -355,6 +306,18 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         return new ArrayList<>();
     }
 
+    public static void main(String[] args) {
+        String query = "华宁zhiku123";
+        List<String> singleWordComplexToken = EnterpriseQueryBuild.getSingleWordComplexToken(query);
+        System.out.printf("单字分词结果：%s\n", JSONObject.toJSONString(singleWordComplexToken));
+
+        List<String> collect = singleWordComplexToken.stream()
+                .map(o -> PinyinAlphabetTokenizer.walk(PinyinUtil.termToPinyin(o)))
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+        System.out.printf("拼音分词结果：%s\n", JSONObject.toJSONString(collect));
+    }
+
     /**
      * 拼音分词结果
      *
@@ -380,11 +343,9 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         return new ArrayList<>();
     }
 
-
     public static Query busIdQuery(String query) {
         return new TermQuery(new Term("company_id", query));
     }
-
 
     public static Query termPreBoostQuery(String fieldId, String query) {
 
@@ -428,23 +389,74 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         return null;
     }
 
+    public Query singleNameFuzzyQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap) {
+        List<String> querySingleToken = getSingleWordComplexToken(query);
+        PhraseQuery.Builder minQuery = new PhraseQuery.Builder();
+        StopWatch totalTime = new StopWatch();
+        List<String> tmpQueryToken = new ArrayList<>();
+        totalTime.start();
+        for (int i = -1; i < querySingleToken.size(); i++) {
+            if (i == -1) {
+                tmpQueryToken.addAll(querySingleToken);
+            } else {
+                int finalI = i;
+                tmpQueryToken = querySingleToken.stream().filter(item -> !item.equals(querySingleToken.get(finalI))).collect(Collectors.toList());
+            }
+            BooleanQuery.Builder tmpQuery = new BooleanQuery.Builder();
+            for (String token : tmpQueryToken) {
+                tmpQuery.add(new TermQuery(new Term("name_single", token)), BooleanClause.Occur.MUST);
+            }
+            try {
+                TopDocs prefixDocs = searcher.search(tmpQuery.build(), 1);
+                Long hits = prefixDocs.totalHits;
+                if (hits > 0) {
+                    if (tmpQueryToken.size() < 5) {
+                        minQuery.setSlop(1);
+                    } else {
+                        minQuery.setSlop(2);
+                    }
+                    for (String token : tmpQueryToken) {
+                        minQuery.add(new Term("name_single", token));
+                    }
+                    break;
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        totalTime.stop();
+        log.info("查询组合总耗时:{}", totalTime.getTotalTimeMillis());
+
+        //条件过滤
+        Query conditionFilter = StringUtils.isEmpty(filter) ? null : filterHandler(filter, fieldMap);
+
+        if (conditionFilter == null) {
+            return minQuery.build();
+        } else {
+            BooleanQuery.Builder finalQuery = new BooleanQuery.Builder();
+            finalQuery.add(minQuery.build(), BooleanClause.Occur.MUST);
+            finalQuery.add(conditionFilter, BooleanClause.Occur.FILTER);
+            return finalQuery.build();
+        }
+    }
+
     @Override
-    public Pair<String , Query> buildQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
+    public Pair<String, Query> buildQuery(IndexSearcher searcher, String query, String filter, Map<String, FieldDef> fieldMap, QueryTypeEnum type) {
         switch (type) {
             case COMPLEX_QUERY:
-                return Pair.of(COMPLEX_QUERY.getType(),singleWordComplexQuery(query, filter, fieldMap));
+                return Pair.of(COMPLEX_QUERY.getType(), singleWordComplexQuery(query, filter, fieldMap));
             case SINGLE_FUZZY_QUERY:
-                return Pair.of(SINGLE_FUZZY_QUERY.getType(),singleWordFuzzyQuery(query, filter, fieldMap));
+                return Pair.of(SINGLE_FUZZY_QUERY.getType(), singleWordFuzzyQuery(query, filter, fieldMap));
             case SINGLE_NAME_QUERY:
-                return Pair.of(SINGLE_NAME_QUERY.getType(),singleNameFuzzyQuery(searcher, query, filter, fieldMap));
+                return Pair.of(SINGLE_NAME_QUERY.getType(), singleNameFuzzyQuery(searcher, query, filter, fieldMap));
             case PREFIX_QUERY:
-                return Pair.of(PREFIX_QUERY.getType(),sugQueryV2(query));
+                return Pair.of(PREFIX_QUERY.getType(), sugQueryV2(query));
             case PINYIN_QUERY:
-                return Pair.of(PINYIN_QUERY.getType(),pinyinPhraseQuery(query, filter, fieldMap));
+                return Pair.of(PINYIN_QUERY.getType(), pinyinPhraseQuery(query, filter, fieldMap));
             case FUZZY_QUERY:
-                return Pair.of(FUZZY_QUERY.getType(),singleWordPyQuery(query, filter, fieldMap));
+                return Pair.of(FUZZY_QUERY.getType(), singleWordPyQuery(query, filter, fieldMap));
             default:
-                return Pair.of(DETAIL_BY_COMPANY_ID.getType(),busIdQuery(query));
+                return Pair.of(DETAIL_BY_COMPANY_ID.getType(), busIdQuery(query));
         }
     }
 

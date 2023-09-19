@@ -65,6 +65,73 @@ public class ShardIndexLoadService {
 
     private int recallSize = 10;
 
+    private static boolean reScore(String query, String name, Map<String, String> map) {
+        Long score = 0L;
+        TextRelevance trie = new TextRelevance();
+        List<String> tokens = getSingleWordToken(query);
+        Set<String> segments = new HashSet<>(tokens);
+        for (String token : segments) {
+            if (!org.springframework.util.StringUtils.isEmpty(token)) {
+                trie.addKeyword(token);
+            }
+        }
+        Map<String, List<Position>> termPostionMap = new HashMap<>();
+        trie.parsetText4Pos(name, (begin, end, emit) -> termPostionMap.computeIfAbsent(emit, t -> new ArrayList<>()).add(new Position(1, begin)));
+        int matchCount = 0;
+        int distance = 5;
+        int prePosition = 0;
+        for (String token : tokens) {
+            if (termPostionMap.containsKey(token)) {
+                matchCount++;
+                List<Position> matchs = termPostionMap.get(token);
+                if (matchCount == 1) {
+                    prePosition = matchs.stream().map(Position::getOffset).min(Comparator.comparing(Integer::intValue)).orElse(0);
+                    continue;
+                }
+                int finalPrePosition = prePosition;
+                int slop = matchs.stream().map(item -> Math.abs(item.getOffset() - finalPrePosition)).min(Comparator.comparing(Integer::intValue)).orElse(0);
+                prePosition = slop + prePosition;
+                if (slop != 1) {
+                    distance--;
+                }
+                if (distance <= 0) {
+                    break;
+                }
+            }
+        }
+        if (tokens.size() - matchCount <= 2 && distance >= 0) {
+            score = score | (long) 5 << 52;
+            score = score | (long) (7 - (tokens.size() - matchCount)) << 48;
+            score = score | (long) distance << 44;
+            map.put("score", String.valueOf(score));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static List<String> getSingleWordToken(String query) {
+        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()) {
+            List<String> res = new ArrayList<>();
+            TokenStream tokenStream = analyzer.tokenStream("", query);
+            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
+            tokenStream.reset();//必须
+            while (tokenStream.incrementToken()) {
+                res.add(termAtt.toString());
+            }
+            tokenStream.close();//必须
+            return res;
+        } catch (Exception e) {
+            log.error("模糊查询分词异常：{}", query, e);
+        }
+        return new ArrayList<>();
+    }
+
+    public static void main(String[] args) {
+        Map<String, String> termPostionMap = new HashMap<>();
+        reScore("东莞明翔智能科技有限公司", "东莞市明鑫翔智能科技有限公司", termPostionMap);
+    }
+
     public void setShardNum(int shardNum, int recallSize) {
         this.recallSize = recallSize;
         this.shardNum = shardNum;
@@ -137,7 +204,6 @@ public class ShardIndexLoadService {
         return null;
     }
 
-
     /**
      * 查询索引文档
      * 第一步：创建一个Directory对象，也就是索引库存放的位置。
@@ -180,8 +246,8 @@ public class ShardIndexLoadService {
             log.error("参数{}，{}异常或未注册", type, index);
             return Lists.newArrayList();
         }
-        if (StringUtils.isEmpty(query) || query.matches(".*[a-zA-z].*") || query.matches(".*[0-9].*")) {
-            //log.error("参数{}含字母或数字，不支持处理", query);
+        if (StringUtils.isEmpty(query)) {
+            log.error("参数{}为空，不支持处理", query);
             return Lists.newArrayList();
         }
         Pair<String, Query> queryPair = queryBuild.buildQuery(searcher, query, filter, fieldMap, queryTypeEnum);
@@ -219,72 +285,5 @@ public class ShardIndexLoadService {
         }
 
         return list;
-    }
-
-    private static boolean reScore(String query, String name, Map<String, String> map) {
-        Long score = 0L;
-        TextRelevance trie = new TextRelevance();
-        List<String> tokens = getSingleWordToken(query);
-        Set<String> segments = new HashSet<>(tokens);
-        for (String token : segments) {
-            if (!org.springframework.util.StringUtils.isEmpty(token)) {
-                trie.addKeyword(token);
-            }
-        }
-        Map<String, List<Position>> termPostionMap = new HashMap<>();
-        trie.parsetText4Pos(name, (begin, end, emit) -> termPostionMap.computeIfAbsent(emit, t -> new ArrayList<>()).add(new Position(1, begin)));
-        int matchCount = 0;
-        int distance = 5;
-        int prePosition = 0;
-        for (String token : tokens) {
-            if (termPostionMap.containsKey(token)) {
-                matchCount++;
-                List<Position> matchs = termPostionMap.get(token);
-                if (matchCount == 1) {
-                    prePosition = matchs.stream().map(Position::getOffset).min(Comparator.comparing(Integer::intValue)).orElse(0);
-                    continue;
-                }
-                int finalPrePosition = prePosition;
-                int slop = matchs.stream().map(item -> Math.abs(item.getOffset() - finalPrePosition)).min(Comparator.comparing(Integer::intValue)).orElse(0);
-                prePosition = slop + prePosition;
-                if (slop != 1) {
-                    distance--;
-                }
-                if (distance <= 0) {
-                    break;
-                }
-            }
-        }
-        if (tokens.size() - matchCount <= 2 && distance >= 0) {
-            score = score | (long) 5 << 52;
-            score = score | (long) (7 - (tokens.size() - matchCount)) << 48;
-            score = score | (long) distance << 44;
-            map.put("score", String.valueOf(score));
-            return true;
-        }
-
-        return false;
-    }
-
-    private static List<String> getSingleWordToken(String query) {
-        try (MySingleCharAnalyzer analyzer = new MySingleCharAnalyzer()) {
-            List<String> res = new ArrayList<>();
-            TokenStream tokenStream = analyzer.tokenStream("", query);
-            CharTermAttribute termAtt = tokenStream.addAttribute(CharTermAttribute.class);
-            tokenStream.reset();//必须
-            while (tokenStream.incrementToken()) {
-                res.add(termAtt.toString());
-            }
-            tokenStream.close();//必须
-            return res;
-        } catch (Exception e) {
-            log.error("模糊查询分词异常：{}", query, e);
-        }
-        return new ArrayList<>();
-    }
-
-    public static void main(String[] args) {
-        Map<String, String> termPostionMap = new HashMap<>();
-        reScore("东莞明翔智能科技有限公司", "东莞市明鑫翔智能科技有限公司", termPostionMap);
     }
 }
