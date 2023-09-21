@@ -9,13 +9,13 @@ configs:
 
       #      fsPath: D:\searchfile\v5\shard-index-sug
       #      fsPath: D:\searchfile\shard_single_index
-      fsPath: /appstore/bird/bird-search-multirecall/shard_index_fs
-      aliaPath: /appstore/bird/bird-search-multirecall/shard_index_alia
+      fsPath: /appstore/bird/lucene-search/shard_index_fs
+      aliaPath: /appstore/bird/lucene-search/shard_index_alia
       fsPathName: fsindex
       #      incrPath: D:\searchfile\shard_single_index
       #      incrPathName: mmapindex
       shardNum: 50
-      switchIndex: /appstore/bird/bird-search-multirecall/switch.data
+      switchIndex: /appstore/bird/lucene-search/switch.data
       recallSize: 200
       fieldMap:
         id:

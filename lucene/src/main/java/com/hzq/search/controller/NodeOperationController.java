@@ -98,7 +98,7 @@ public class NodeOperationController {
         headers.setContentType(MediaType.APPLICATION_JSON);
         //日志链路id衔接
         headers.set(TRACE_ID, MDC.get(TRACE_ID));
-        List<ServiceInstance> instances = discoveryClient.getInstances("bird-search-multirecall");
+        List<ServiceInstance> instances = discoveryClient.getInstances("lucene-search");
 
         List<AsynUtil.TaskExecute> taskExecutes = instances.stream().map(instance -> (AsynUtil.TaskExecute) () -> {
             String url =
