@@ -59,6 +59,13 @@ configs:
         #          stored: 0
         #          dbFieldFlag: 0
         #          parentField: used_name
+        complex_field_single_pinyin:
+          fieldName: complex_field_single_pinyin
+          analyzerType: 9
+          fieldType: 1
+          stored: 0
+          dbFieldFlag: 0
+          parentField: name,used_name,product_brand_names,app_name,oper_name_one
         name_single_pinyin:
           fieldName: name_single_pinyin
           analyzerType: 9

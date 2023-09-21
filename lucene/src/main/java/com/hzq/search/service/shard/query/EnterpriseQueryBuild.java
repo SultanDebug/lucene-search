@@ -224,7 +224,7 @@ public class EnterpriseQueryBuild extends QueryBuildAbstract implements Initiali
         }
         for (String token : singleWordToken) {
             String py = PinyinUtil.termToPinyin(token);
-            namePhs.add(new Term("name_single_pinyin", py));
+            namePhs.add(new Term("complex_field_single_pinyin", py));
         }
 
         //条件过滤

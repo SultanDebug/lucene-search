@@ -50,49 +50,11 @@ public class ShardIndexService {
 
     //字段根据配置生成分词信息
     private List<Pair<String, Analyzer>> fieldConfigs;
-
-    public void setShardNum(int shardNum) {
-        this.shardNum = shardNum;
-    }
-
-    public void setShardIndexLoadService(ShardIndexLoadService shardIndexLoadService) {
-        this.shardIndexLoadService = shardIndexLoadService;
-    }
-
-    //地址组成 主路径+分片id+主索引/增量索引名
-    public void setFsPath(String fsPath, int shardNum, String fsPathName) {
-        this.fsPath = fsPath + File.separator + shardNum + File.separator + fsPathName;
-        this.shardNum = shardNum;
-    }
-
-    public void setFieldConfigs(Map<String, FieldDef> defMap) {
-        this.fieldConfigs = this.getCurIndexFieldConfig(defMap);
-    }
-
     /**
-     * Description:
-     * 索引配置信息
-     * 字段分词、io等
-     *
-     * @param
-     * @return
-     * @author Huangzq
-     * @date 2022/12/6 19:23
+     * 仅限初始化使用
      */
-    private IndexWriterConfig getConfig(List<Pair<String, Analyzer>> fieldConfig) {
-        Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
-
-        for (Pair<String, Analyzer> pair : fieldConfig) {
-            fieldAnalyzers.put(pair.getLeft(), pair.getRight());
-        }
-
-        // 对于没有指定的分词器的字段，使用标准分词器
-        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new MyIkAnalyzer(false), fieldAnalyzers);
-
-        IndexWriterConfig conf = new IndexWriterConfig(analyzer);
-        conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
-        return conf;
-    }
+    private IndexWriter mainIndex = null;
+    private Directory fsDirectory = null;
 
     public static void main(String[] args) throws IOException {
         Analyzer analyzer = new StandardAnalyzer();
@@ -187,6 +149,49 @@ public class ShardIndexService {
         }
 
         return res;
+    }
+
+    public void setShardNum(int shardNum) {
+        this.shardNum = shardNum;
+    }
+
+    public void setShardIndexLoadService(ShardIndexLoadService shardIndexLoadService) {
+        this.shardIndexLoadService = shardIndexLoadService;
+    }
+
+    //地址组成 主路径+分片id+主索引/增量索引名
+    public void setFsPath(String fsPath, int shardNum, String fsPathName) {
+        this.fsPath = fsPath + File.separator + shardNum + File.separator + fsPathName;
+        this.shardNum = shardNum;
+    }
+
+    public void setFieldConfigs(Map<String, FieldDef> defMap) {
+        this.fieldConfigs = this.getCurIndexFieldConfig(defMap);
+    }
+
+    /**
+     * Description:
+     * 索引配置信息
+     * 字段分词、io等
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:23
+     */
+    private IndexWriterConfig getConfig(List<Pair<String, Analyzer>> fieldConfig) {
+        Map<String, Analyzer> fieldAnalyzers = new HashMap<>();
+
+        for (Pair<String, Analyzer> pair : fieldConfig) {
+            fieldAnalyzers.put(pair.getLeft(), pair.getRight());
+        }
+
+        // 对于没有指定的分词器的字段，使用标准分词器
+        PerFieldAnalyzerWrapper analyzer = new PerFieldAnalyzerWrapper(new MyIkAnalyzer(false), fieldAnalyzers);
+
+        IndexWriterConfig conf = new IndexWriterConfig(analyzer);
+        conf.setOpenMode(IndexWriterConfig.OpenMode.CREATE_OR_APPEND);
+        return conf;
     }
 
     /**
@@ -319,12 +324,6 @@ public class ShardIndexService {
         }
 
     }
-
-    /**
-     * 仅限初始化使用
-     */
-    private IndexWriter mainIndex = null;
-    private Directory fsDirectory = null;
 
     /**
      * Description:
@@ -511,10 +510,16 @@ public class ShardIndexService {
                 if (entry.getValue().getDbFieldFlag() == 1) {
                     continue;
                 }
-                val = valMap.get(entry.getValue().getParentField());
-                if (Objects.isNull(val)) {
+                String parentField = entry.getValue().getParentField();
+                if (StringUtils.isEmpty(parentField)) {
                     continue;
                 }
+                String[] split = parentField.split(",");
+                StringBuilder valTmp = new StringBuilder();
+                for (String feild : split) {
+                    valTmp.append(" ").append(valMap.get(feild));
+                }
+                val = valTmp.toString().trim();
             }
             String fieldVal = val.toString();
             /*String fieldVal = StringTools.normalServerString(val.toString());
