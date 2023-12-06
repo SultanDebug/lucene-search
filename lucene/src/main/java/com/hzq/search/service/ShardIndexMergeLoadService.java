@@ -87,4 +87,40 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
         }
         return null;
     }
+
+    /**
+     * Description:
+     * 搜索入口，并发搜索所有分片
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:33
+     */
+    public List<List<Map<String, Object>>> concurrentInfo(String index) {
+        log.info("分片信息查询开始：查询索引-{}", index);
+        if (!this.checkIndex(false, index)) {
+            log.warn("索引不存在{}", index);
+            return null;
+        }
+        Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>> indexLoadServiceMap = SHARD_INDEX_MAP.get(index);
+        if (indexLoadServiceMap == null) {
+            log.warn("索引不存在{}", index);
+            return null;
+        }
+        long start = System.currentTimeMillis();
+        try {
+            List<Supplier<List<Map<String, Object>>>> list = indexLoadServiceMap.values().stream()
+                    .map(service -> (Supplier<List<Map<String, Object>>>) () -> service.getRight().shardInfo(index))
+                    .collect(Collectors.toList());
+
+            List<List<Map<String, Object>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
+            long time = System.currentTimeMillis() - start;
+            log.info("分片信息查询结束：数量-{},耗时-{},", collects.size(), time);
+            return collects;
+        } catch (Exception e) {
+            log.error("查询失败：{}", e.getMessage(), e);
+        }
+        return null;
+    }
 }

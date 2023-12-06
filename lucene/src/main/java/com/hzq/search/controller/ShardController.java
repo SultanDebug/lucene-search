@@ -42,12 +42,11 @@ import java.util.concurrent.Semaphore;
 @Slf4j
 @Scope
 public class ShardController {
+    public static ConcurrentMap<String, Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
     @Autowired
     private ShardIndexMergeLoadService shardIndexMergeLoadService;
-
     @Autowired
     private ShardIndexMergeService shardIndexMergeService;
-
     @Autowired
     private IndexInfoService indexInfoService;
 
@@ -88,8 +87,6 @@ public class ShardController {
         return ResultResponse.success(name);
     }
 
-    public static ConcurrentMap<String, Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
-
     @ApiOperation(value = "索引创建")
     @ApiImplicitParams({
             @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
@@ -117,25 +114,35 @@ public class ShardController {
             @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
     })
     @GetMapping(value = "/shard/status")
-    public ResultResponse<Map<String,String>> status(@RequestParam("index") String index) {
+    public ResultResponse<Map<String, String>> status(@RequestParam("index") String index) {
         Semaphore semaphore = SEMAPHORE_MAP.computeIfAbsent(index, s -> new Semaphore(1));
 
-        Map<String,String> map = new HashMap<>();
+        Map<String, String> map = new HashMap<>();
         if (semaphore.tryAcquire()) {
             try {
-                map.put("lock","锁空闲");
+                map.put("lock", "锁空闲");
             } catch (Exception e) {
                 log.error("位置异常", e);
             } finally {
                 semaphore.release();
             }
         } else {
-            map.put("lock","索引生成中");
+            map.put("lock", "索引生成中");
         }
 
-        indexInfoService.getCurIndex(index,map);
+        indexInfoService.getCurIndex(index, map);
 
         return ResultResponse.success(map);
+    }
+
+    @ApiOperation(value = "索引信息查询")
+    @ApiImplicitParams({
+            @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
+    })
+    @GetMapping(value = "/shard/info")
+    public ResultResponse<List<List<Map<String, Object>>>> info(@RequestParam("index") String index) {
+        List<List<Map<String, Object>>> list = shardIndexMergeLoadService.concurrentInfo(index);
+        return ResultResponse.success(list);
     }
 
     @PostMapping(value = "/shard/add/{index}")

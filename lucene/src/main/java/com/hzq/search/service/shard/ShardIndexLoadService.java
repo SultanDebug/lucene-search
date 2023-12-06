@@ -16,6 +16,8 @@ import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.DirectoryReader;
 import org.apache.lucene.index.IndexReader;
+import org.apache.lucene.index.SegmentCommitInfo;
+import org.apache.lucene.index.SegmentInfos;
 import org.apache.lucene.search.*;
 import org.apache.lucene.store.Directory;
 import org.apache.lucene.store.FSDirectory;
@@ -198,6 +200,47 @@ public class ShardIndexLoadService {
                 //fsSearcher.setSimilarity(new BooleanSimilarity());
             }
             return this.sesarch(index, fsSearcher, fieldMap, query, filter, totle, type, explain);
+        } catch (Exception e) {
+            log.error("查询失败：{}", e.getMessage(), e);
+        }
+        return null;
+    }
+
+    /**
+     * Description:
+     * 索引信息
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/6 19:14
+     */
+    public List<Map<String, Object>> shardInfo(String index) {
+        if (StringUtils.isBlank(fsPath)) {
+            log.error("索引参数未配置！");
+            return null;
+        }
+        try {
+            if (fsDirectory == null) {
+                fsDirectory = FSDirectory.open(Paths.get(fsPath));
+                fsReader = DirectoryReader.open(fsDirectory);
+                fsSearcher = new IndexSearcher(fsReader);
+                //fsSearcher.setSimilarity(new BooleanSimilarity());
+            }
+
+            // 获取索引段信息
+            SegmentInfos segmentInfos = SegmentInfos.readLatestCommit(fsDirectory);
+            List<Map<String, Object>> list = new ArrayList<>();
+            for (SegmentCommitInfo segmentCommitInfo : segmentInfos) {
+                Map<String, Object> map = new HashMap<>();
+                // 打印每个索引段的信息
+                map.put("Segment Name: ", segmentCommitInfo.info.name);
+                map.put("Segment Max Doc: ", segmentCommitInfo.info.maxDoc());
+                map.put("Segment Doc Count: ", segmentCommitInfo.info.maxDoc() - segmentCommitInfo.getDelCount());
+                list.add(map);
+            }
+
+            return list;
         } catch (Exception e) {
             log.error("查询失败：{}", e.getMessage(), e);
         }
