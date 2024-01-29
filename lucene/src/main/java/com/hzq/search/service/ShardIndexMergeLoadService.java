@@ -50,7 +50,18 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                     .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().shardSearch(index, fieldMap, query, filter, totle, type, explain))
                     .collect(Collectors.toList());
 
+            log.info("查询前==>任务数：{}，总线程数：{}， 活动线程数：{}， 排队线程数：{}， 执行完成线程数：{}"
+                    , indexLoadServiceMap.values().size()
+                    , EXECUTOR_SERVICE.getTaskCount()
+                    , EXECUTOR_SERVICE.getActiveCount()
+                    , EXECUTOR_SERVICE.getQueue().size()
+                    , EXECUTOR_SERVICE.getCompletedTaskCount());
             List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(EXECUTOR_SERVICE, list);
+            log.info("查询后==>总线程数：{}， 活动线程数：{}， 排队线程数：{}， 执行完成线程数：{}"
+                    , EXECUTOR_SERVICE.getTaskCount()
+                    , EXECUTOR_SERVICE.getActiveCount()
+                    , EXECUTOR_SERVICE.getQueue().size()
+                    , EXECUTOR_SERVICE.getCompletedTaskCount());
 
             List<Map<String, String>> res = collects.stream()
                     .flatMap(Collection::stream)
