@@ -41,6 +41,34 @@ import static com.hzq.search.log.CommonConstants.TRACE_ID;
 public class NodeOperationController {
 
     public static ConcurrentMap<String, Semaphore> SEMAPHORE_MAP = new ConcurrentHashMap<>();
+    /**
+     * 同步实例数据线程池
+     */
+    private static ThreadPoolExecutor QUERY_INFO_EXECUTOR_SERVICE = new ThreadPoolExecutor(
+            2,
+            100,
+            60L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(100),
+            t -> {
+                Thread tt = new Thread(t);
+                tt.setName("query-info-" + tt.getId());
+                tt.setUncaughtExceptionHandler((Thread ttt, Throwable e) -> {
+                    log.error("[{}]:捕获到异常：", ttt.getName(), e);
+                });
+                return tt;
+            },
+            new ThreadPoolExecutor.AbortPolicy() {
+                @Override
+                public void rejectedExecution(Runnable r, ThreadPoolExecutor pool) {
+                    log.error("拒绝策略:: 总线程数：{}， 活动线程数：{}， 排队线程数：{}， 执行完成线程数：{}", pool.getTaskCount(),
+                            pool.getActiveCount(), pool.getQueue().size(), pool.getCompletedTaskCount());
+                }
+            });
+    @Resource
+    private DiscoveryClient discoveryClient;
+    @Autowired
+    private RestTemplate restTemplate;
 
     @ApiOperation(value = "多节点索引创建")
     @ApiImplicitParams({
@@ -66,7 +94,6 @@ public class NodeOperationController {
         }
     }
 
-
     @ApiOperation(value = "节点索引创建状态查询")
     @ApiImplicitParams({
             @ApiImplicitParam(paramType = "query", name = "index", value = "索引名", required = true)
@@ -78,19 +105,6 @@ public class NodeOperationController {
                 };
         return ResultResponse.success(syncData(index, "/shard/status", classType));
     }
-
-    @Resource
-    private DiscoveryClient discoveryClient;
-
-    @Autowired
-    private RestTemplate restTemplate;
-
-    /**
-     * 同步实例数据线程池
-     */
-    private static ExecutorService EXECUTOR_SERVICE = new ThreadPoolExecutor(2, 100,
-            0L, TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<>());
 
     private <T> Map<String, Object> syncData(String index, String path, ParameterizedTypeReference<ResultResponse<T>> classType) {
         Map<String, Object> result = new HashMap<>();
@@ -122,7 +136,7 @@ public class NodeOperationController {
         }).collect(Collectors.toList());
 
         try {
-            AsynUtil.executeSync(EXECUTOR_SERVICE, taskExecutes);
+            AsynUtil.executeSync(QUERY_INFO_EXECUTOR_SERVICE, taskExecutes);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }

@@ -21,6 +21,7 @@ import org.apache.lucene.document.DoublePoint;
 import org.apache.lucene.document.IntPoint;
 import org.apache.lucene.index.Term;
 import org.apache.lucene.queryparser.classic.QueryParser;
+import org.apache.lucene.queryparser.xml.builders.TermsQueryBuilder;
 import org.apache.lucene.search.*;
 import org.wltea.analyzer.lucene.IKAnalyzer;
 
@@ -238,7 +239,7 @@ public class QueryBuild {
      */
     public static Query singleWordComplexQuery(String query, String filter, Map<String, FieldDef> fieldMap) {
         List<String> singleWordToken = getSingleWordComplexToken(query);
-
+        TermsQueryBuilder
         BooleanQuery.Builder nameWordQuery = new BooleanQuery.Builder();
         BooleanQuery.Builder userNameWordQuery = new BooleanQuery.Builder();
         int queryLength = singleWordToken.size();

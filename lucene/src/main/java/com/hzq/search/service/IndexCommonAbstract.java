@@ -16,7 +16,6 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
@@ -27,20 +26,82 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 public abstract class IndexCommonAbstract {
-    static final int NO_EXISTS = 0;
     public static final int MAIN_INDEX = 1;
     public static final int ALIA_INDEX = 2;
-    public static ExecutorService executorService = new ThreadPoolExecutor(100,
+    static final int NO_EXISTS = 0;
+    //EXECUTOR_SERVICE
+    public static ThreadPoolExecutor EXECUTOR_SERVICE = new ThreadPoolExecutor(
+            100,
             1000,
-            0L,
-            TimeUnit.MILLISECONDS,
-            new LinkedBlockingQueue<Runnable>());
+            60L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingQueue<>(1000),
+            t -> {
+                Thread tt = new Thread(t);
+                tt.setName("shard-index-search-" + tt.getId());
+                tt.setUncaughtExceptionHandler((Thread ttt, Throwable e) -> {
+                    log.error("[{}]:捕获到异常：", ttt.getName(), e);
+                });
+                return tt;
+            },
+            new ThreadPoolExecutor.AbortPolicy() {
+                @Override
+                public void rejectedExecution(Runnable r, ThreadPoolExecutor pool) {
+                    log.error("拒绝策略:: 总线程数：{}， 活动线程数：{}， 排队线程数：{}， 执行完成线程数：{}", pool.getTaskCount(),
+                            pool.getActiveCount(), pool.getQueue().size(), pool.getCompletedTaskCount());
+                }
+            });
+    public static Map<String, Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>>> SHARD_INDEX_MAP = new HashMap<>();
+    public static Map<String, Integer> CUR_INDEX_MAP = new HashMap<>();
     @Resource
     public IndexConfig indexConfig;
 
-    public static Map<String, Map<Integer, Pair<ShardIndexService, ShardIndexLoadService>>> SHARD_INDEX_MAP = new HashMap<>();
-    public static Map<String, Integer> CUR_INDEX_MAP = new HashMap<>();
+    public static JSONObject getCurrentIndexInfo(String path) {
+        File file = new File(path);
+        JSONObject res = null;
+        if (file.exists()) {
+            try (
+                    FileInputStream fis = new FileInputStream(file);
+                    InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
+                    BufferedReader br = new BufferedReader(isr);
+            ) {
+                String dataLine = "";
+                StringBuilder buffer = new StringBuilder();
+                while ((dataLine = br.readLine()) != null) {
+                    buffer.append(dataLine);
+                }
+                //兼容处理
+                if ("1".equals(buffer.toString()) || "2".equals(buffer.toString())) {
+                    file.delete();
+                    log.info("兼容处理，删除索引记录：{}", buffer);
+                    return null;
+                }
 
+                res = JSON.parseObject(buffer.toString());
+                log.info("当前索引信息：{}", res);
+                return res;
+            } catch (Exception e) {
+                log.error("索引记录文件读取失败:{},{}", res, path);
+                throw new RuntimeException("索引记录文件读取失败", e);
+            }
+        }
+        return res;
+    }
+
+    public static void main(String[] args) {
+        try {
+            String switchIndex = "D:\\searchfile\\switch.data";
+
+            File file = new File(switchIndex);
+            try (FileWriter writer = new FileWriter(file)) {
+                writer.write(String.valueOf(1));
+                writer.flush();
+            } catch (Exception e) {
+                log.error("索引记录文件写入失败:{}", switchIndex);
+            }
+        } catch (Exception e) {
+        }
+    }
 
     /**
      * Description:
@@ -115,54 +176,6 @@ public abstract class IndexCommonAbstract {
         SHARD_INDEX_MAP.put(index, map);
         return true;
     }
-
-    public static JSONObject getCurrentIndexInfo(String path) {
-        File file = new File(path);
-        JSONObject res = null;
-        if (file.exists()) {
-            try (
-                    FileInputStream fis = new FileInputStream(file);
-                    InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
-                    BufferedReader br = new BufferedReader(isr);
-            ) {
-                String dataLine = "";
-                StringBuilder buffer = new StringBuilder();
-                while ((dataLine = br.readLine()) != null) {
-                    buffer.append(dataLine);
-                }
-                //兼容处理
-                if ("1".equals(buffer.toString()) || "2".equals(buffer.toString())) {
-                    file.delete();
-                    log.info("兼容处理，删除索引记录：{}", buffer);
-                    return null;
-                }
-
-                res = JSON.parseObject(buffer.toString());
-                log.info("当前索引信息：{}", res);
-                return res;
-            } catch (Exception e) {
-                log.error("索引记录文件读取失败:{},{}", res, path);
-                throw new RuntimeException("索引记录文件读取失败", e);
-            }
-        }
-        return res;
-    }
-
-    public static void main(String[] args) {
-        try {
-            String switchIndex = "D:\\searchfile\\switch.data";
-
-            File file = new File(switchIndex);
-            try (FileWriter writer = new FileWriter(file)) {
-                writer.write(String.valueOf(1));
-                writer.flush();
-            } catch (Exception e) {
-                log.error("索引记录文件写入失败:{}", switchIndex);
-            }
-        } catch (Exception e) {
-        }
-    }
-
 
     public boolean saveCurrentIndexInfo(String index, String update) {
         //校验是否配置

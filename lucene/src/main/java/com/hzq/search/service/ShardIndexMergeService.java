@@ -28,6 +28,25 @@ import java.util.stream.Collectors;
 public class ShardIndexMergeService extends IndexCommonAbstract {
     /**
      * Description:
+     * 宽表数据库连接
+     *
+     * @param
+     * @return
+     * @author Huangzq
+     * @date 2022/12/14 14:56
+     */
+    public static JdbcTemplate createJdbcTemplate(String url, String username, String password) {
+        DruidDataSource dataSource = new DruidDataSource();
+        dataSource.setUrl(url);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        dataSource.setSocketTimeout(-1);
+        dataSource.setConnectTimeout(-1);
+        return new JdbcTemplate(dataSource);
+    }
+
+    /**
+     * Description:
      * 索引合并，并发所有分片合并主、增量索引，并通知所有搜索实例更新索引信息
      *
      * @param
@@ -48,7 +67,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                 }).collect(Collectors.toList());
 
         try {
-            AsynUtil.executeSync(executorService, tasks);
+            AsynUtil.executeSync(EXECUTOR_SERVICE, tasks);
         } catch (Exception e) {
             log.error("数据合并异常：{}", e.getMessage(), e);
         }
@@ -154,7 +173,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
                         }).collect(Collectors.toList());
 
                 //分片任务执行
-                AsynUtil.executeSync(executorService, tasks);
+                AsynUtil.executeSync(EXECUTOR_SERVICE, tasks);
 
                 //分片索引加载完成，通知索引切换
                 for (Map.Entry<Integer, Pair<ShardIndexService, ShardIndexLoadService>> entry : SHARD_INDEX_MAP.get(index).entrySet()) {
@@ -184,7 +203,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
             List<AsynUtil.TaskExecute> collect = SHARD_INDEX_MAP.get(index).values().stream()
                     .map(o -> (AsynUtil.TaskExecute) () -> o.getLeft().noticeSearcher(searchPath))
                     .collect(Collectors.toList());
-            AsynUtil.executeSync(executorService, collect);
+            AsynUtil.executeSync(EXECUTOR_SERVICE, collect);
 
             log.info("段合并结束【{}】", System.currentTimeMillis() - start);
             //保存当前索引信息
@@ -200,7 +219,6 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         }
         return null;
     }
-
 
     /**
      * Description:
@@ -344,7 +362,7 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         }
 
         try {
-            AsynUtil.executeSync(executorService, tasks);
+            AsynUtil.executeSync(EXECUTOR_SERVICE, tasks);
         } catch (InterruptedException e) {
             throw new RuntimeException(e);
         }
@@ -356,24 +374,5 @@ public class ShardIndexMergeService extends IndexCommonAbstract {
         String sql = "select " + fieldStr + " from tablename where id > " + min + " and id<= " + max;
         List<Map<String, Object>> maps = jdbcTemplate.queryForList(sql);
         return maps;
-    }
-
-    /**
-     * Description:
-     * 宽表数据库连接
-     *
-     * @param
-     * @return
-     * @author Huangzq
-     * @date 2022/12/14 14:56
-     */
-    public static JdbcTemplate createJdbcTemplate(String url, String username, String password) {
-        DruidDataSource dataSource = new DruidDataSource();
-        dataSource.setUrl(url);
-        dataSource.setUsername(username);
-        dataSource.setPassword(password);
-        dataSource.setSocketTimeout(-1);
-        dataSource.setConnectTimeout(-1);
-        return new JdbcTemplate(dataSource);
     }
 }

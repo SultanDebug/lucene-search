@@ -50,7 +50,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                     .map(service -> (Supplier<List<Map<String, String>>>) () -> service.getRight().shardSearch(index, fieldMap, query, filter, totle, type, explain))
                     .collect(Collectors.toList());
 
-            List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
+            List<List<Map<String, String>>> collects = AsynUtil.submitToListBySupplier(EXECUTOR_SERVICE, list);
 
             List<Map<String, String>> res = collects.stream()
                     .flatMap(Collection::stream)
@@ -114,7 +114,7 @@ public class ShardIndexMergeLoadService extends IndexCommonAbstract {
                     .map(service -> (Supplier<List<Map<String, Object>>>) () -> service.getRight().shardInfo(index))
                     .collect(Collectors.toList());
 
-            List<List<Map<String, Object>>> collects = AsynUtil.submitToListBySupplier(executorService, list);
+            List<List<Map<String, Object>>> collects = AsynUtil.submitToListBySupplier(EXECUTOR_SERVICE, list);
             long time = System.currentTimeMillis() - start;
             log.info("分片信息查询结束：数量-{},耗时-{},", collects.size(), time);
             return collects;
